@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="description" content="StoreCrew system design: the Operator, sixteen agents, the brain, request lifecycle, three modes, data levels, run cost and infrastructure.">
+<title>StoreCrew Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#F3F5F2; --card:#FFFFFF; --ink:#141A17; --ink2:#4C5A53; --ink3:#7B8A83;
+  --rule:#D5DCD7; --rule2:#E7ECE8; --accent:#1F4FBF; --accent-soft:#E4EAFA;
+  --mark:#B8791C; --mark-soft:#FAEFD8; --flag:#AE4030; --flag-soft:#F9E4E0;
+  --pos:#177A56; --pos-soft:#DFF0E8;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --disp:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+  --body:"Source Serif 4",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0F1513; --card:#171E1B; --ink:#E7EDE9; --ink2:#A4B2AB; --ink3:#75857D;
+  --rule:#2A3531; --rule2:#1F2925; --accent:#7B9BF5; --accent-soft:#17233F;
+  --mark:#E8AE45; --mark-soft:#38290F; --flag:#E6836A; --flag-soft:#3A1E18;
+  --pos:#4FBE92; --pos-soft:#143125;
+}}
+:root[data-theme="dark"]{
+  --paper:#0F1513; --card:#171E1B; --ink:#E7EDE9; --ink2:#A4B2AB; --ink3:#75857D;
+  --rule:#2A3531; --rule2:#1F2925; --accent:#7B9BF5; --accent-soft:#17233F;
+  --mark:#E8AE45; --mark-soft:#38290F; --flag:#E6836A; --flag-soft:#3A1E18;
+  --pos:#4FBE92; --pos-soft:#143125;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+header.top{padding:52px 0 26px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+h1{font-family:var(--disp);font-weight:800;font-size:clamp(32px,5vw,54px);line-height:1.03;letter-spacing:-.02em;margin:10px 0 12px;text-wrap:balance;max-width:22ch}
+.lede{font-size:19.5px;color:var(--ink2);max-width:64ch;margin:0}
+.layout{display:grid;grid-template-columns:212px minmax(0,1fr);gap:44px;padding:32px 0 72px}
+nav.toc{position:sticky;top:20px;align-self:start;font-family:var(--disp);font-size:13.5px;line-height:1.35}
+nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+nav.toc a{color:var(--ink2);text-decoration:none;display:block;padding:3px 0 3px 10px;border-left:2px solid var(--rule2)}
+nav.toc a:hover{color:var(--ink);border-color:var(--accent)}
+nav.toc .n{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-right:6px}
+main{min-width:0}
+section{padding:24px 0 32px;border-bottom:1px solid var(--rule)}
+section:last-child{border-bottom:0}
+h2{font-family:var(--disp);font-weight:800;font-size:30px;line-height:1.08;letter-spacing:-.015em;margin:0 0 8px;text-wrap:balance}
+h2 .n{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink3);display:block;margin-bottom:7px;letter-spacing:.06em}
+h3{font-family:var(--disp);font-weight:700;font-size:19.5px;line-height:1.2;margin:26px 0 8px;letter-spacing:-.01em}
+p{margin:0 0 12px;max-width:72ch}
+ul,ol{margin:0 0 14px;padding-left:21px;max-width:72ch}
+li{margin-bottom:5px}
+.sum{font-size:18px;color:var(--ink2);max-width:68ch;margin-bottom:16px}
+.verdict{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:17px 20px;margin:16px 0 20px}
+.verdict .lbl{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.verdict p:last-child{margin-bottom:0}
+.tbl{overflow-x:auto;margin:12px 0 20px;border:1px solid var(--rule);background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{font-family:var(--disp);font-weight:700;text-align:left;padding:10px 12px;border-bottom:2px solid var(--rule);background:var(--paper);white-space:nowrap;font-size:13.5px}
+td{padding:9px 12px;border-bottom:1px solid var(--rule2);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.c{text-align:center;font-family:var(--mono);font-size:13px}
+.pill{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:2px;background:var(--mark-soft);color:var(--mark);font-weight:600}
+.pill.g{background:var(--pos-soft);color:var(--pos)}
+.pill.b{background:var(--accent-soft);color:var(--accent)}
+.pill.r{background:var(--flag-soft);color:var(--flag)}
+figure{margin:18px 0 26px;background:var(--card);border:1px solid var(--rule);padding:18px 18px 12px}
+figure svg{display:block;max-width:100%;height:auto;color:var(--ink);font-family:var(--disp)}
+figcaption{font-family:var(--body);font-size:14.5px;color:var(--ink2);margin-top:12px;padding-top:10px;border-top:1px solid var(--rule2);max-width:none}
+figcaption b{color:var(--ink)}
+/* svg classes, applied from the page stylesheet */
+.bx{fill:var(--card);stroke:currentColor;stroke-width:1.2}
+.bxs{fill:var(--paper);stroke:currentColor;stroke-width:1.2}
+.bxa{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.6}
+.bxm{fill:var(--mark-soft);stroke:var(--mark);stroke-width:1.4}
+.bxp{fill:var(--pos-soft);stroke:var(--pos);stroke-width:1.4}
+.bxr{fill:var(--flag-soft);stroke:var(--flag);stroke-width:1.4}
+.ln{stroke:currentColor;stroke-width:1.2;fill:none}
+.lna{stroke:var(--accent);stroke-width:2;fill:none}
+.lnp{stroke:var(--pos);stroke-width:2;fill:none}
+.lnr{stroke:var(--flag);stroke-width:1.6;fill:none}
+.lnd{stroke:currentColor;stroke-width:1.2;fill:none;stroke-dasharray:4 4}
+.t{font-size:12.5px;fill:currentColor}
+.tb{font-size:12.5px;fill:currentColor;font-weight:700}
+.ts{font-size:11px;fill:var(--ink3)}
+.tm{font-family:var(--mono);font-size:10.5px;fill:var(--ink3)}
+.ta{font-size:12px;fill:var(--accent);font-weight:700}
+.tp{font-size:12px;fill:var(--pos);font-weight:700}
+.tr{font-size:12px;fill:var(--flag);font-weight:700}
+.grp{fill:none;stroke:currentColor;stroke-width:1;stroke-dasharray:3 5;opacity:.6}
+.small{font-size:14px;color:var(--ink3)}
+.bar{fill:var(--accent)}
+.barm{fill:var(--mark)}
+footer{padding:24px 0 56px;font-family:var(--mono);font-size:12px;color:var(--ink3);border-top:1px solid var(--rule)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:18px}nav.toc{position:static;border-bottom:1px solid var(--rule);padding-bottom:14px}nav.toc ol{flex-direction:row;flex-wrap:wrap;gap:6px 14px}nav.toc a{border-left:0;padding:2px 0}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+<style>img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="eyebrow">StoreCrew / system design / 5 September 2026</div>
+  <h1>How the crew is wired</h1>
+  <p class="lede">The architecture behind a marketing brain that acts: the operator that routes every request, the sixteen specialist agents, the brain they all read and write, and the infrastructure that runs them without anyone's laptop being on. Six new agents proposed for you to pick from.</p>
+</div></header>
+
+<div class="wrap layout">
+<nav class="toc" aria-label="Sections"><ol>
+  <li><a href="#s1"><span class="n">01</span>System at a glance</a></li>
+  <li><a href="#s2"><span class="n">02</span>The Operator</a></li>
+  <li><a href="#s3"><span class="n">03</span>Six new agents</a></li>
+  <li><a href="#s4"><span class="n">04</span>Two agents expanded</a></li>
+  <li><a href="#s5"><span class="n">05</span>The full crew map</a></li>
+  <li><a href="#s6"><span class="n">06</span>The closed loop</a></li>
+  <li><a href="#s7"><span class="n">07</span>A request's life</a></li>
+  <li><a href="#s8"><span class="n">08</span>Three modes, one agent</a></li>
+  <li><a href="#s9"><span class="n">09</span>Data levels</a></li>
+  <li><a href="#s10"><span class="n">10</span>The brain</a></li>
+  <li><a href="#s11"><span class="n">11</span>Run cost by agent</a></li>
+  <li><a href="#s12"><span class="n">12</span>Infrastructure</a></li>
+</ol></nav>
+
+<main>
+
+<section id="s1">
+  <h2><span class="n">01</span>The system at a glance</h2>
+  <p class="sum">Seven layers. A message enters at the top, work happens in the middle, results land in storage and come back as a notification. The brain sits beside every layer, because every agent reads it before acting and writes to it after.</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 720" role="img" aria-label="Seven-layer architecture: interfaces feed a gateway, the gateway feeds the Operator agent, the Operator dispatches specialist agents through a queue to a VM runner, agents call tools and data, outputs land in storage, and the brain is read and written at every step.">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      <marker id="ara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+      <marker id="arp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--pos)"/></marker>
+    </defs>
+
+    <!-- Layer 1: interfaces -->
+    <text x="20" y="34" class="tm">1 INTERFACES</text>
+    <rect x="20" y="44" width="130" height="44" class="bx"/><text x="85" y="71" class="t" text-anchor="middle">Telegram</text>
+    <rect x="160" y="44" width="130" height="44" class="bx"/><text x="225" y="71" class="t" text-anchor="middle">WhatsApp</text>
+    <rect x="300" y="44" width="130" height="44" class="bx"/><text x="365" y="71" class="t" text-anchor="middle">Dashboard</text>
+    <rect x="440" y="44" width="130" height="44" class="bx"/><text x="505" y="71" class="t" text-anchor="middle">Email digest</text>
+    <rect x="580" y="44" width="150" height="44" class="bxs"/><text x="655" y="64" class="t" text-anchor="middle">Their ChatGPT</text><text x="655" y="79" class="ts" text-anchor="middle">Tier 1 only, no gateway</text>
+
+    <!-- Layer 2: gateway -->
+    <text x="20" y="128" class="tm">2 GATEWAY  (Cloudflare Worker)</text>
+    <rect x="20" y="138" width="550" height="56" class="bx"/>
+    <text x="34" y="161" class="tb">Channel adapters</text><text x="34" y="178" class="ts">one webhook per channel, normalised to a common envelope</text>
+    <text x="330" y="161" class="tb">Durable Object per customer</text><text x="330" y="178" class="ts">conversation state, approval tokens, rate limit</text>
+    <line x1="295" y1="88" x2="295" y2="138" class="ln" marker-end="url(#ar)"/>
+    <text x="303" y="116" class="ts">message in</text>
+    <line x1="120" y1="138" x2="120" y2="88" class="lnd" marker-end="url(#ar)"/>
+    <text x="126" y="116" class="ts">reply, approval request</text>
+
+    <!-- Layer 3: operator -->
+    <text x="20" y="234" class="tm">3 OPERATOR AGENT</text>
+    <rect x="20" y="244" width="550" height="64" class="bxa"/>
+    <text x="34" y="267" class="ta">Intent → plan → route → approvals → brief</text>
+    <text x="34" y="286" class="ts">never does domain work itself. Holds global guardrails: total spend, daily action caps, who may approve</text>
+    <line x1="295" y1="194" x2="295" y2="244" class="lna" marker-end="url(#ara)"/>
+    <text x="303" y="222" class="ts">envelope</text>
+
+    <!-- Layer 4: queue + runner -->
+    <text x="20" y="348" class="tm">4 DISPATCH</text>
+    <rect x="20" y="358" width="200" height="50" class="bx"/><text x="120" y="379" class="tb" text-anchor="middle">Queue</text><text x="120" y="395" class="ts" text-anchor="middle">retries, dead-letter</text>
+    <rect x="240" y="358" width="150" height="50" class="bx"/><text x="315" y="379" class="tb" text-anchor="middle">Cron</text><text x="315" y="395" class="ts" text-anchor="middle">Hosted schedules</text>
+    <rect x="410" y="358" width="160" height="50" class="bx"/><text x="490" y="379" class="tb" text-anchor="middle">Spend cap check</text><text x="490" y="395" class="ts" text-anchor="middle">per customer, before run</text>
+    <line x1="120" y1="308" x2="120" y2="358" class="lna" marker-end="url(#ara)"/>
+    <text x="128" y="336" class="ts">job</text>
+    <line x1="315" y1="358" x2="315" y2="308" class="lnd" marker-end="url(#ar)"/>
+    <text x="323" y="336" class="ts">scheduled job wakes Operator</text>
+
+    <!-- Layer 5: agents on VM -->
+    <text x="20" y="448" class="tm">5 SPECIALIST AGENTS  (Claude Agent SDK on the VM runner)</text>
+    <rect x="20" y="458" width="550" height="70" class="bx"/>
+    <text x="34" y="480" class="tb">16 agents, each: read brain → do the job → request approval if the guardrail says so → write result</text>
+    <text x="34" y="498" class="ts">Store Fix · Creator Outreach · Ad Creative · Ad Growth · Lifecycle · Retention · Post-Purchase · UGC Seeding</text>
+    <text x="34" y="514" class="ts">Affiliate · Content · Social · Competitor Watch · Reviews · SEO and AI Search · Weekly Brain Update · Offer and Landing Page</text>
+    <line x1="120" y1="408" x2="120" y2="458" class="lna" marker-end="url(#ara)"/>
+    <text x="128" y="436" class="ts">run</text>
+    <line x1="490" y1="458" x2="490" y2="408" class="lnd" marker-end="url(#ar)"/>
+    <text x="498" y="436" class="ts">needs approval, pauses</text>
+
+    <!-- Layer 6: tools -->
+    <text x="20" y="568" class="tm">6 TOOLS AND DATA</text>
+    <rect x="20" y="578" width="105" height="44" class="bxs"/><text x="72" y="596" class="t" text-anchor="middle">Shopify</text><text x="72" y="611" class="ts" text-anchor="middle">L1 L2 L3</text>
+    <rect x="133" y="578" width="105" height="44" class="bxs"/><text x="185" y="596" class="t" text-anchor="middle">Meta Ads</text><text x="185" y="611" class="ts" text-anchor="middle">read + paused write</text>
+    <rect x="246" y="578" width="105" height="44" class="bxs"/><text x="298" y="596" class="t" text-anchor="middle">ESP, WhatsApp</text><text x="298" y="611" class="ts" text-anchor="middle">flows, sends</text>
+    <rect x="359" y="578" width="105" height="44" class="bxs"/><text x="411" y="596" class="t" text-anchor="middle">Creator APIs</text><text x="411" y="611" class="ts" text-anchor="middle">via treg or own</text>
+    <rect x="472" y="578" width="98" height="44" class="bxs"/><text x="521" y="596" class="t" text-anchor="middle">Image, video</text><text x="521" y="611" class="ts" text-anchor="middle">Replicate</text>
+    <line x1="295" y1="528" x2="295" y2="578" class="ln" marker-end="url(#ar)"/>
+    <text x="303" y="556" class="ts">tool calls, inside guardrails</text>
+
+    <!-- Layer 7: storage -->
+    <text x="20" y="662" class="tm">7 STORAGE</text>
+    <rect x="20" y="672" width="265" height="40" class="bx"/><text x="152" y="697" class="t" text-anchor="middle">R2: every output, every creative</text>
+    <rect x="305" y="672" width="265" height="40" class="bx"/><text x="437" y="697" class="t" text-anchor="middle">D1: runs, approvals, spend, events</text>
+    <line x1="152" y1="528" x2="152" y2="672" class="lnd"/>
+    <line x1="152" y1="560" x2="152" y2="672" class="ln" marker-end="url(#ar)"/>
+    <text x="160" y="650" class="ts">writes output</text>
+
+    <!-- The brain, right column -->
+    <rect x="620" y="138" width="360" height="574" class="bxp"/>
+    <text x="800" y="166" class="tp" text-anchor="middle">THE BRAIN, one per customer</text>
+    <text x="800" y="184" class="ts" text-anchor="middle">markdown in R2, indexed in D1</text>
+    <rect x="640" y="205" width="320" height="42" class="bx"/><text x="654" y="223" class="tb">1 Identity</text><text x="654" y="238" class="ts">what we sell, voice, claims allowed</text>
+    <rect x="640" y="257" width="320" height="42" class="bx"/><text x="654" y="275" class="tb">2 Customer</text><text x="654" y="290" class="ts">who buys, objections, their words</text>
+    <rect x="640" y="309" width="320" height="42" class="bx"/><text x="654" y="327" class="tb">3 Product</text><text x="654" y="342" class="ts">catalogue, margins, seasonality</text>
+    <rect x="640" y="361" width="320" height="42" class="bx"/><text x="654" y="379" class="tb">4 Performance</text><text x="654" y="394" class="ts">what ads, emails, pages actually did</text>
+    <rect x="640" y="413" width="320" height="42" class="bxm"/><text x="654" y="431" class="tb">5 Learnings</text><text x="654" y="446" class="ts">the decision log. Written only by agents. The moat</text>
+    <rect x="640" y="465" width="320" height="42" class="bx"/><text x="654" y="483" class="tb">6 Operations</text><text x="654" y="498" class="ts">connected tools, caps, approvers, market module</text>
+    <rect x="640" y="530" width="320" height="42" class="bxs"/><text x="654" y="548" class="tb">Modules</text><text x="654" y="563" class="ts">Category Brain Starter + Market Playbook, loaded at build</text>
+
+    <!-- brain read/write arrows -->
+    <line x1="570" y1="276" x2="620" y2="276" class="lnp" marker-end="url(#arp)"/>
+    <line x1="620" y1="292" x2="570" y2="292" class="lnp" marker-end="url(#arp)"/>
+    <text x="595" y="264" class="ts" text-anchor="middle">reads</text>
+    <text x="595" y="310" class="ts" text-anchor="middle">writes</text>
+    <line x1="570" y1="486" x2="620" y2="486" class="lnp" marker-end="url(#arp)"/>
+    <line x1="620" y1="502" x2="570" y2="502" class="lnp" marker-end="url(#arp)"/>
+    <text x="595" y="474" class="ts" text-anchor="middle">reads</text>
+    <text x="595" y="520" class="ts" text-anchor="middle">writes</text>
+    <text x="800" y="600" class="ts" text-anchor="middle">Weekly Brain Update Agent</text>
+    <text x="800" y="616" class="ts" text-anchor="middle">is the only agent allowed to write layer 4</text>
+    <text x="800" y="632" class="ts" text-anchor="middle">Every write is dated and attributed</text>
+    <text x="800" y="648" class="ts" text-anchor="middle">Nothing is ever deleted, only superseded</text>
+    <text x="800" y="690" class="ts" text-anchor="middle">Tier 1 buyers hold this file themselves</text>
+  </svg>
+  <figcaption><b>The seven layers, and the brain beside all of them.</b> Solid arrows are the forward path of a request. Dashed arrows are the return path: replies, approval requests, and scheduled jobs waking the Operator. Both the Operator and every specialist read the brain before acting and write to it after. Tier 1 buyers run agents in their own ChatGPT and hold the brain file themselves, so layers 2 to 7 are ours only from Tier 2 up.</figcaption>
+  </figure>
+
+  <div class="verdict"><div class="lbl">The three design rules the whole thing rests on</div>
+    <p><b>The Operator never does domain work.</b> It plans, routes, collects approvals and compiles the brief. Specialists do the work. That keeps the one component every request passes through small, testable and boring, which is exactly what you want it to be.</p>
+    <p><b>Every action that costs money or touches a customer passes an approval gate that fails closed.</b> Expired, malformed or missing approval means nothing happens and the agent asks again. There is no path where silence becomes consent.</p>
+    <p><b>The brain is the only shared state between agents.</b> Agents never call each other directly. Creator Outreach does not tell Ad Creative which UGC came in; it writes to the brain, and Ad Creative reads it. That is what makes agents independently deployable and independently sellable.</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>The Operator: the one they actually talk to</h2>
+  <p class="sum">You are right that there has to be one. Every message from the owner lands on the Operator, whichever channel it came through. It is the crew's manager, and it is the personality of the product.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Job</th><th>What it does</th><th>What it must never do</th></tr></thead>
+    <tbody>
+    <tr><td><b>Understand</b></td><td>Classifies intent from plain language. "How did last week go" and "why are sales down" are the same intent with different urgency</td><td>Guess when ambiguous. It asks one clarifying question instead</td></tr>
+    <tr><td><b>Plan</b></td><td>Decides whether this is one agent or several. "Launch my new serum" becomes Store Fix (page), Ad Creative (batch), Lifecycle (launch flow), UGC Seeding (first 20 creators), Content (announcement), in that order, with dependencies</td><td>Run a multi-agent plan without showing it first. Plans over one agent are always previewed</td></tr>
+    <tr><td><b>Route</b></td><td>Dispatches to specialists through the queue with the brain context they need, and nothing else</td><td>Pass one agent's raw output to another. Agents only share state through the brain</td></tr>
+    <tr><td><b>Gate</b></td><td>Holds the global guardrails above every agent's own: total daily spend, total messages sent to customers per day, who is allowed to approve what</td><td>Let a per-agent guardrail override a global one. Global always wins</td></tr>
+    <tr><td><b>Collect approvals</b></td><td>Turns a paused agent's request into a chat message with buttons, routes the answer back, expires it at 24 hours</td><td>Batch approvals into one "approve all" button. Each is a separate decision</td></tr>
+    <tr><td><b>Report</b></td><td>Compiles the Monday brief from every agent's week, and answers "what happened" questions from the brain and the run log</td><td>Report anything it cannot point to a run or a brain entry for</td></tr>
+    <tr><td><b>Learn</b></td><td>Writes orchestration-level learnings to the brain: which plans worked, which agents the owner overrides most, what they ask about</td><td>Write domain learnings. Those belong to the specialist that produced them</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Why it is small on purpose.</b> The Operator is the one thing that can break everything, so it carries the least logic. It has no tools of its own except the queue, the brain, the run log and the gateway. It cannot call Shopify, it cannot send a creator a DM, it cannot spend a rupee. If it is compromised or confused, the worst it can do is dispatch a job that then hits the specialist's own guardrails and the spend cap.</p>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>Six new agents, for you to pick two or three</h2>
+  <p class="sum">Built from the gaps you named. Each has the same contract as the existing ten: what it does in Act mode, what it needs, and the guardrails that make Autonomous mode safe. My pick is marked.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Agent</th><th>What it does in Act mode</th><th>Tools</th><th>Guardrails</th><th>From</th></tr></thead>
+    <tbody>
+    <tr><td>11</td><td><b>Ad Growth Agent</b> <span class="pill g">My pick</span></td><td>Reads account performance daily. Shifts budget between ad sets inside a total cap. Pauses losers and scales winners on <b>written, versioned rules</b>. Launches audience and placement tests as paused drafts. Reports what each rule did and why</td><td>Meta Marketing API read and write, Google Ads later, the brain's performance layer</td><td>Total daily spend cap, never exceeded. No single change over 20% of a budget in one day. Never creates a campaign without approval. Every change logged with the rule that fired. New customers start in Advise for 14 days so the rules are tuned on their account before they act</td><td>15, 58, new</td></tr>
+    <tr><td>12</td><td><b>UGC Seeding Agent</b> <span class="pill g">My pick</span></td><td>Finds micro-creators (1k to 50k) who take product for content. Sends the offer, collects shipping details, creates the Shopify draft order at 100% discount, tracks delivery, chases the deliverable, collects usage rights, files the content into the creative library where Ad Creative can use it</td><td>Creator data API, DM and email sender, Shopify draft orders, storage</td><td>Product cost cap per month. Creator count cap. <b>Usage rights on file before any content enters an ad.</b> Never promises payment. One follow-up, then closes</td><td>9, 14, 21, new</td></tr>
+    <tr><td>13</td><td><b>Retention and Winback Agent</b> <span class="pill g">My pick</span></td><td>Segments customers by recency, frequency and value. Identifies at-risk and lapsed. Predicts replenishment timing per product. Builds and launches winback, loyalty and replenishment campaigns through the connections Lifecycle already made</td><td>Shopify orders (level 2 or 3), ESP or WhatsApp API</td><td>Discount depth cap. Frequency cap per customer per month. Never contacts unsubscribed. Campaigns held for approval for the first 30 days</td><td>Lifecycle library, new</td></tr>
+    <tr><td>14</td><td><b>Affiliate Agent</b></td><td>Finds affiliate candidates: bloggers, YouTubers, deal sites, high-value customers. Recruits with a tailored pitch. Creates unique codes and tracked links in Shopify. Onboards with a kit. Monitors performance, flags top performers for better terms, prepares the monthly payout report</td><td>Shopify discounts API, email, creator data, optional affiliate platform</td><td>Commission band fixed. Never changes terms without approval. Payouts are reports, never transfers. Recruitment volume cap per week</td><td>10, 9, new</td></tr>
+    <tr><td>15</td><td><b>Social Engagement Agent</b></td><td>Replies to comments and DMs in brand voice, answers product questions from the brain, routes purchase intent to a link, flags complaints to a human, listens for brand mentions, engages with creator posts that feature the brand</td><td>Instagram Graph API, Meta messaging, listening via scrapers</td><td>Never argues. Never discusses refunds publicly. Complaint reaches a human within the hour. No engagement on political or sensitive threads. Daily action cap</td><td>29, 65, new</td></tr>
+    <tr><td>16</td><td><b>Offer and Landing Page Agent</b></td><td>Builds campaign landing pages and tests offers: bundle versus discount versus gift. Creates the Shopify pages and discount codes, points Ad Creative's batch at the right page, reads results and picks the winner</td><td>Shopify pages and discounts API, analytics read</td><td>Pages go to draft or an unlisted URL first. Discount depth cap. Never edits the main product page, that is Store Fix's job. One live test per product at a time</td><td>13, 42, 43, new</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="verdict"><div class="lbl">Why these three</div>
+    <p><b>Ad Growth</b> is the largest single money lever a store has and the biggest hole in the current lineup: we make creative and then do nothing with the account it runs in. <b>UGC Seeding</b> is the one nobody else can easily copy, because you already have the creator discovery pipeline built and verified, and it feeds Ad Creative with real footage for free. <b>Retention and Winback</b> is where the lifetime value sits and it is the least served by anything a store owner can buy today.</p>
+    <p>Affiliate is a good agent for a mature brand and a distraction for a new one. Social Engagement is high-touch and the riskiest to run autonomously. Offer and Landing Page is strong but overlaps Store Fix enough that it can wait.</p>
+  </div>
+
+  <h3>On your question about retention and content</h3>
+  <p>Content does not cover retention. Content Publishing is acquisition-side: it makes reels and carousels that bring new people in. Retention is a different job with different data. It needs order history, segments and lifetime value, and its output is a campaign to people who already bought. Lifecycle Agent builds the always-on flows once (welcome, cart, post-purchase). Retention and Winback is the person who then uses that plumbing every week to decide who gets what. Plumbing versus operator.</p>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>Two existing agents, expanded</h2>
+
+  <h3>Reviews Agent: grow and respond, one agent</h3>
+  <p>You are right to club them. Review Response (inbound) and review sourcing (outbound) share the same platform connection and the same brain layer, so they are one agent with two halves.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Half</th><th>What it does</th><th>Guardrails</th></tr></thead>
+    <tbody>
+    <tr><td><b>Grow</b></td><td>Times the review request per product to <b>after delivery</b>, not after purchase. Runs incentive programs inside platform policy. Collects photo and video reviews. Seeds reviews on new products through the people UGC Seeding already shipped to. Syndicates to Google Shopping. Asks once per order</td><td><b>Never gates negative reviews</b> (illegal under FTC rules and unlawful in the UK and EU). Incentives disclosed per platform policy. Never edits or fabricates a review. One ask per order</td></tr>
+    <tr><td><b>Respond</b></td><td>Replies to new reviews in brand voice. Routes genuine complaints to a human before they escalate. Feeds recurring objections into the brain's customer layer, where Store Fix and Ad Creative pick them up</td><td>Never replies below 3 stars without a human. Never offers a refund or discount in public</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>SEO and AI Search Agent: seven jobs, not one</h3>
+  <p>The current version tracks whether ChatGPT recommends you and ships schema fixes. That is a monitor with a small hand. The expanded version is the whole organic channel.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Job</th><th>What it does</th><th>Act output</th><th>From</th></tr></thead>
+    <tbody>
+    <tr><td><b>Research</b></td><td>Keyword and question research from the brain's customer layer plus live search data, grouped by intent</td><td>A ranked target list in the brain</td><td>treg, 38</td></tr>
+    <tr><td><b>Technical audit</b></td><td>Crawl, indexation, speed, schema, mobile, internal links</td><td>Ranked fix list, then applied where safe</td><td>37, 330 checkpoints</td></tr>
+    <tr><td><b>Product page SEO</b></td><td>Titles, metas, schema, FAQ blocks rewritten from what customers actually ask</td><td>Draft changes, approved, applied</td><td>42, Reviews Agent feed</td></tr>
+    <tr><td><b>Programmatic pages</b></td><td>Comparison, "best X for Y", alternatives and collection pages generated to draft from the catalogue</td><td>Draft pages, never auto-published</td><td>39, magicfit-tools</td></tr>
+    <tr><td><b>AI visibility</b></td><td>Monthly sweep of ChatGPT, Gemini, Perplexity and Google AI Overviews for the category's buying questions. Who gets cited, why, and what they have that we do not</td><td>Visibility report, written to the brain</td><td>llm-radar, citation-engine</td></tr>
+    <tr><td><b>Citation engineering</b></td><td>Creates the quotable content LLMs actually cite: stats with sources, comparisons, direct-answer FAQ</td><td>Draft content, hands publication to Content Publishing</td><td>citation-engine, 38</td></tr>
+    <tr><td><b>Calendar</b></td><td>A monthly organic content calendar that Content Publishing executes</td><td>Calendar in the brain</td><td>35</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Guardrails: every page and change goes to draft. No claim outside the brain's approved list. Never deletes a page. Never keyword-stuffs, with a written density rule. Programmatic pages capped per month so a store does not wake up with 400 thin pages.</p>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>The full crew map</h2>
+  <p class="sum">Sixteen specialists under one Operator, grouped by the stage of the funnel they act on. The three we build first are marked, and they are also the three-agent Hosted bundle.</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 560" role="img" aria-label="Crew map: the Operator at the top, sixteen specialist agents grouped into Acquire, Convert, Retain and Operate, with the brain beneath them all. Store Fix, Creator Outreach and Weekly Brain Update are marked as the first three built.">
+    <defs>
+      <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+    </defs>
+    <rect x="350" y="20" width="300" height="56" class="bxa"/>
+    <text x="500" y="44" class="ta" text-anchor="middle">OPERATOR AGENT</text>
+    <text x="500" y="62" class="ts" text-anchor="middle">plans, routes, gates, approves, reports</text>
+
+    <line x1="500" y1="76" x2="500" y2="100" class="lna"/>
+    <line x1="130" y1="100" x2="870" y2="100" class="lna"/>
+    <line x1="130" y1="100" x2="130" y2="124" class="lna" marker-end="url(#ar2)"/>
+    <line x1="377" y1="100" x2="377" y2="124" class="lna" marker-end="url(#ar2)"/>
+    <line x1="624" y1="100" x2="624" y2="124" class="lna" marker-end="url(#ar2)"/>
+    <line x1="870" y1="100" x2="870" y2="124" class="lna" marker-end="url(#ar2)"/>
+
+    <!-- Acquire -->
+    <rect x="20" y="124" width="220" height="300" class="grp"/>
+    <text x="130" y="146" class="tb" text-anchor="middle">ACQUIRE</text>
+    <rect x="32" y="160" width="196" height="40" class="bxm"/><text x="130" y="178" class="t" text-anchor="middle">Creator Outreach</text><text x="130" y="193" class="tm" text-anchor="middle">BUILT FIRST</text>
+    <rect x="32" y="208" width="196" height="40" class="bx"/><text x="130" y="233" class="t" text-anchor="middle">Ad Creative</text>
+    <rect x="32" y="256" width="196" height="40" class="bx"/><text x="130" y="281" class="t" text-anchor="middle">Ad Growth</text>
+    <rect x="32" y="304" width="196" height="40" class="bx"/><text x="130" y="329" class="t" text-anchor="middle">UGC Seeding</text>
+    <rect x="32" y="352" width="196" height="40" class="bx"/><text x="130" y="377" class="t" text-anchor="middle">Affiliate</text>
+
+    <!-- Convert -->
+    <rect x="267" y="124" width="220" height="300" class="grp"/>
+    <text x="377" y="146" class="tb" text-anchor="middle">CONVERT</text>
+    <rect x="279" y="160" width="196" height="40" class="bxm"/><text x="377" y="178" class="t" text-anchor="middle">Store Fix</text><text x="377" y="193" class="tm" text-anchor="middle">BUILT FIRST</text>
+    <rect x="279" y="208" width="196" height="40" class="bx"/><text x="377" y="233" class="t" text-anchor="middle">Offer and Landing Page</text>
+    <rect x="279" y="256" width="196" height="40" class="bx"/><text x="377" y="281" class="t" text-anchor="middle">SEO and AI Search</text>
+    <rect x="279" y="304" width="196" height="40" class="bx"/><text x="377" y="329" class="t" text-anchor="middle">Reviews</text>
+
+    <!-- Retain -->
+    <rect x="514" y="124" width="220" height="300" class="grp"/>
+    <text x="624" y="146" class="tb" text-anchor="middle">RETAIN</text>
+    <rect x="526" y="160" width="196" height="40" class="bx"/><text x="624" y="185" class="t" text-anchor="middle">Lifecycle</text>
+    <rect x="526" y="208" width="196" height="40" class="bx"/><text x="624" y="233" class="t" text-anchor="middle">Retention and Winback</text>
+    <rect x="526" y="256" width="196" height="40" class="bx"/><text x="624" y="281" class="t" text-anchor="middle">Post-Purchase</text>
+    <rect x="526" y="304" width="196" height="40" class="bx"/><text x="624" y="329" class="t" text-anchor="middle">Social Engagement</text>
+
+    <!-- Operate -->
+    <rect x="761" y="124" width="220" height="300" class="grp"/>
+    <text x="871" y="146" class="tb" text-anchor="middle">OPERATE</text>
+    <rect x="773" y="160" width="196" height="40" class="bxm"/><text x="871" y="178" class="t" text-anchor="middle">Weekly Brain Update</text><text x="871" y="193" class="tm" text-anchor="middle">BUILT FIRST</text>
+    <rect x="773" y="208" width="196" height="40" class="bx"/><text x="871" y="233" class="t" text-anchor="middle">Content Publishing</text>
+    <rect x="773" y="256" width="196" height="40" class="bx"/><text x="871" y="281" class="t" text-anchor="middle">Competitor Watch</text>
+    <rect x="773" y="304" width="196" height="40" class="bxs"/><text x="871" y="329" class="t" text-anchor="middle">Brain Builder</text>
+
+    <!-- brain -->
+    <rect x="20" y="460" width="961" height="60" class="bxp"/>
+    <text x="500" y="486" class="tp" text-anchor="middle">THE BRAIN</text>
+    <text x="500" y="505" class="ts" text-anchor="middle">every agent reads before acting and writes after. Agents never talk to each other directly. This is the only shared state.</text>
+    <line x1="130" y1="424" x2="130" y2="460" class="lnp"/>
+    <line x1="377" y1="424" x2="377" y2="460" class="lnp"/>
+    <line x1="624" y1="424" x2="624" y2="460" class="lnp"/>
+    <line x1="871" y1="424" x2="871" y2="460" class="lnp"/>
+  </svg>
+  <figcaption><b>Sixteen specialists, four stages, one manager, one memory.</b> The Operator dispatches down; every agent reads and writes the brain below. The grouping is the funnel stage each agent acts on, which is also how the landing page should present them, because a store owner thinks in "get customers, convert them, keep them" and not in agent names.</figcaption>
+  </figure>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>The closed loop, and the one arrow Runneth does not have</h2>
+  <p class="sum">This is the whole differentiation, drawn. Both systems have a brain. Only one of them has agents that write back to it.</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 300" role="img" aria-label="Side by side comparison. Left, Runneth: a human reads the brain, does the work in their tools, and a human updates the brain. Right, StoreCrew: agents read the brain, act through tools, and the Weekly Brain Update Agent writes results back automatically. The write-back arrow is the difference.">
+    <defs>
+      <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      <marker id="ar3p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--pos)"/></marker>
+      <marker id="ar3r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--flag)"/></marker>
+    </defs>
+    <!-- Left: Runneth -->
+    <text x="240" y="28" class="tb" text-anchor="middle">Runneth, and every other brand brain</text>
+    <rect x="40" y="60" width="150" height="48" class="bx"/><text x="115" y="88" class="t" text-anchor="middle">Brain</text>
+    <rect x="290" y="60" width="150" height="48" class="bx"/><text x="365" y="88" class="t" text-anchor="middle">Human</text>
+    <rect x="290" y="190" width="150" height="48" class="bxs"/><text x="365" y="212" class="t" text-anchor="middle">Their tools</text><text x="365" y="227" class="ts" text-anchor="middle">Meta, Klaviyo, Shopify</text>
+    <line x1="190" y1="84" x2="290" y2="84" class="ln" marker-end="url(#ar3)"/>
+    <text x="240" y="76" class="ts" text-anchor="middle">reads</text>
+    <line x1="365" y1="108" x2="365" y2="190" class="ln" marker-end="url(#ar3)"/>
+    <text x="373" y="152" class="ts">does the work</text>
+    <path d="M 290 214 L 115 214 L 115 108" class="lnr" stroke-dasharray="5 5" marker-end="url(#ar3r)"/>
+    <text x="200" y="232" class="tr" text-anchor="middle">human remembers to update it</text>
+    <text x="200" y="248" class="ts" text-anchor="middle">usually does not</text>
+
+    <!-- Right: StoreCrew -->
+    <text x="760" y="28" class="tb" text-anchor="middle">StoreCrew</text>
+    <rect x="560" y="60" width="150" height="48" class="bxp"/><text x="635" y="88" class="tp" text-anchor="middle">Brain</text>
+    <rect x="810" y="60" width="150" height="48" class="bxa"/><text x="885" y="88" class="ta" text-anchor="middle">Agents</text>
+    <rect x="810" y="190" width="150" height="48" class="bxs"/><text x="885" y="212" class="t" text-anchor="middle">Their tools</text><text x="885" y="227" class="ts" text-anchor="middle">same tools</text>
+    <line x1="710" y1="84" x2="810" y2="84" class="ln" marker-end="url(#ar3)"/>
+    <text x="760" y="76" class="ts" text-anchor="middle">read</text>
+    <line x1="885" y1="108" x2="885" y2="190" class="ln" marker-end="url(#ar3)"/>
+    <text x="893" y="152" class="ts">act, inside guardrails</text>
+    <path d="M 810 214 L 635 214 L 635 108" class="lnp" marker-end="url(#ar3p)"/>
+    <text x="722" y="232" class="tp" text-anchor="middle">Weekly Brain Update Agent writes results back</text>
+    <text x="722" y="248" class="ts" text-anchor="middle">every Monday, dated, attributed, never deleted</text>
+    <text x="722" y="280" class="ts" text-anchor="middle">This arrow is the product.</text>
+  </svg>
+  <figcaption><b>Same brain, same tools, one different arrow.</b> On the left the loop closes only if a human remembers to write down what happened, which is the step every brand brain on the market depends on and none of them can enforce. On the right the loop closes itself. Two months in, the right-hand brain knows things about the store that the owner does not, and that is what makes the monthly hard to cancel.</figcaption>
+  </figure>
+</section>
+
+<section id="s7">
+  <h2><span class="n">07</span>The life of one request</h2>
+  <p class="sum">What happens between "find me 20 skincare creators under $200" arriving in Telegram and the deals landing in the brain. The approval branch is the part that has to be right.</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 400" role="img" aria-label="State flow of a request: received, classified, planned, queued, running, then either completed directly or paused for approval. Approval can be approved, rejected, or expire after 24 hours. Rejected and expired both fail closed. Completed writes output to storage and the brain, then notifies.">
+    <defs>
+      <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      <marker id="ar4p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--pos)"/></marker>
+      <marker id="ar4r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--flag)"/></marker>
+    </defs>
+    <!-- main row -->
+    <rect x="20" y="60" width="120" height="48" class="bx"/><text x="80" y="80" class="t" text-anchor="middle">Received</text><text x="80" y="96" class="ts" text-anchor="middle">gateway</text>
+    <rect x="170" y="60" width="120" height="48" class="bxa"/><text x="230" y="80" class="t" text-anchor="middle">Classified</text><text x="230" y="96" class="ts" text-anchor="middle">Operator</text>
+    <rect x="320" y="60" width="120" height="48" class="bxa"/><text x="380" y="80" class="t" text-anchor="middle">Planned</text><text x="380" y="96" class="ts" text-anchor="middle">1 agent or many</text>
+    <rect x="470" y="60" width="120" height="48" class="bx"/><text x="530" y="80" class="t" text-anchor="middle">Queued</text><text x="530" y="96" class="ts" text-anchor="middle">spend cap checked</text>
+    <rect x="620" y="60" width="120" height="48" class="bx"/><text x="680" y="80" class="t" text-anchor="middle">Running</text><text x="680" y="96" class="ts" text-anchor="middle">VM, Agent SDK</text>
+    <rect x="860" y="60" width="120" height="48" class="bxp"/><text x="920" y="80" class="tp" text-anchor="middle">Completed</text><text x="920" y="96" class="ts" text-anchor="middle">output to R2</text>
+
+    <line x1="140" y1="84" x2="170" y2="84" class="ln" marker-end="url(#ar4)"/>
+    <line x1="290" y1="84" x2="320" y2="84" class="ln" marker-end="url(#ar4)"/>
+    <line x1="440" y1="84" x2="470" y2="84" class="ln" marker-end="url(#ar4)"/>
+    <line x1="590" y1="84" x2="620" y2="84" class="ln" marker-end="url(#ar4)"/>
+    <line x1="740" y1="84" x2="860" y2="84" class="ln" marker-end="url(#ar4)"/>
+    <text x="800" y="76" class="ts" text-anchor="middle">no gate hit</text>
+
+    <!-- ambiguity loop -->
+    <path d="M 230 60 L 230 30 L 80 30 L 80 60" class="lnd" marker-end="url(#ar4)"/>
+    <text x="155" y="24" class="ts" text-anchor="middle">ambiguous: asks one question, waits</text>
+
+    <!-- approval branch -->
+    <line x1="680" y1="108" x2="680" y2="170" class="ln" marker-end="url(#ar4)"/>
+    <text x="688" y="142" class="ts">guardrail says: needs a human</text>
+    <rect x="600" y="170" width="160" height="56" class="bxm"/>
+    <text x="680" y="192" class="tb" text-anchor="middle">Paused for approval</text>
+    <text x="680" y="210" class="ts" text-anchor="middle">signed token, buttons sent</text>
+
+    <line x1="760" y1="198" x2="860" y2="198" class="lnp" marker-end="url(#ar4p)"/>
+    <text x="810" y="190" class="tp" text-anchor="middle">approved</text>
+    <rect x="860" y="174" width="120" height="48" class="bxp"/><text x="920" y="194" class="t" text-anchor="middle">Resumes</text><text x="920" y="210" class="ts" text-anchor="middle">token burned</text>
+    <line x1="920" y1="174" x2="920" y2="108" class="lnp" marker-end="url(#ar4p)"/>
+
+    <line x1="640" y1="226" x2="640" y2="290" class="lnr" marker-end="url(#ar4r)"/>
+    <text x="560" y="262" class="tr" text-anchor="end">rejected</text>
+    <line x1="720" y1="226" x2="720" y2="290" class="lnr" marker-end="url(#ar4r)"/>
+    <text x="728" y="262" class="tr">24h, no answer</text>
+    <rect x="560" y="290" width="160" height="48" class="bxr"/><text x="640" y="310" class="tr" text-anchor="middle">Closed, nothing done</text><text x="640" y="326" class="ts" text-anchor="middle">logged, agent will ask again</text>
+    <rect x="740" y="290" width="160" height="48" class="bxr"/><text x="820" y="310" class="tr" text-anchor="middle">Expired, nothing done</text><text x="820" y="326" class="ts" text-anchor="middle">fails closed</text>
+
+    <!-- completion writes -->
+    <line x1="920" y1="108" x2="920" y2="130" class="ln"/>
+    <text x="920" y="146" class="ts" text-anchor="middle">writes to brain, notifies channel</text>
+
+    <text x="20" y="380" class="ts">Every transition writes an event to D1. That event stream is the run log, the audit trail, the live activity feed on the landing page, and the source for the Monday brief.</text>
+  </svg>
+  <figcaption><b>Six states forward, one branch down.</b> The only way from Paused to Resumes is a valid, unexpired, unused signed token. Rejection and expiry both end in the same place, which is nothing happening. There is no state in which silence is read as consent, and no state in which an approval can be replayed.</figcaption>
+  </figure>
+</section>
+
+<section id="s8">
+  <h2><span class="n">08</span>Three modes, one agent, what actually changes</h2>
+  <p class="sum">The same Creator Outreach Agent across the three tiers. The agent file is identical. What changes is which connections exist, who owns the schedule, and whose tokens burn.</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 330" role="img" aria-label="Three columns showing the same agent in Advise, Act and Autonomous modes. Advise: agent reads public data and drafts, no tools connected, runs in the buyer's ChatGPT on their tokens. Act: tools are connected on the buyer's keys, agent sends and negotiates, still triggered by the buyer. Autonomous: hosted on our infrastructure, a scheduler triggers it, approvals arrive in chat, tokens are ours.">
+    <defs>
+      <marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      <marker id="ar5a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+    </defs>
+    <!-- Advise -->
+    <text x="165" y="26" class="tb" text-anchor="middle">ADVISE, Brain + Crew, $59 once</text>
+    <rect x="40" y="44" width="250" height="40" class="bxs"/><text x="165" y="69" class="t" text-anchor="middle">Owner opens their ChatGPT</text>
+    <line x1="165" y1="84" x2="165" y2="110" class="ln" marker-end="url(#ar5)"/>
+    <rect x="40" y="110" width="250" height="48" class="bx"/><text x="165" y="130" class="t" text-anchor="middle">Creator Outreach Agent</text><text x="165" y="147" class="ts" text-anchor="middle">reads public data + brain file</text>
+    <line x1="165" y1="158" x2="165" y2="184" class="ln" marker-end="url(#ar5)"/>
+    <rect x="40" y="184" width="250" height="48" class="bx"/><text x="165" y="204" class="t" text-anchor="middle">40 found, 12 qualified, 12 DMs written</text><text x="165" y="221" class="ts" text-anchor="middle">owner copies and sends by hand</text>
+    <rect x="40" y="250" width="250" height="40" class="bxr"/><text x="165" y="275" class="tr" text-anchor="middle">Tools: none connected</text>
+    <text x="165" y="316" class="tm" text-anchor="middle">TOKENS: THEIRS · TRIGGER: THEM</text>
+
+    <!-- Act -->
+    <text x="500" y="26" class="tb" text-anchor="middle">ACT, Connected, $249 once</text>
+    <rect x="375" y="44" width="250" height="40" class="bxs"/><text x="500" y="69" class="t" text-anchor="middle">Owner opens their ChatGPT</text>
+    <line x1="500" y1="84" x2="500" y2="110" class="ln" marker-end="url(#ar5)"/>
+    <rect x="375" y="110" width="250" height="48" class="bx"/><text x="500" y="130" class="t" text-anchor="middle">Creator Outreach Agent</text><text x="500" y="147" class="ts" text-anchor="middle">same file, same brain</text>
+    <line x1="500" y1="158" x2="500" y2="184" class="lna" marker-end="url(#ar5a)"/>
+    <rect x="375" y="184" width="250" height="48" class="bxa"/><text x="500" y="204" class="ta" text-anchor="middle">Sends 12 DMs, negotiates, closes 3</text><text x="500" y="221" class="ts" text-anchor="middle">inside the budget band</text>
+    <rect x="375" y="250" width="250" height="40" class="bxa"/><text x="500" y="275" class="ta" text-anchor="middle">Tools: creator API, DM sender, deal store</text>
+    <text x="500" y="316" class="tm" text-anchor="middle">TOKENS: THEIRS · TRIGGER: THEM · KEYS: THEIRS</text>
+
+    <!-- Autonomous -->
+    <text x="835" y="26" class="tb" text-anchor="middle">AUTONOMOUS, Hosted, $79 a month</text>
+    <rect x="710" y="44" width="250" height="40" class="bxa"/><text x="835" y="69" class="ta" text-anchor="middle">Cron, Tuesday 9am, on our VM</text>
+    <line x1="835" y1="84" x2="835" y2="110" class="lna" marker-end="url(#ar5a)"/>
+    <rect x="710" y="110" width="250" height="48" class="bx"/><text x="835" y="130" class="t" text-anchor="middle">Creator Outreach Agent</text><text x="835" y="147" class="ts" text-anchor="middle">same file, same brain</text>
+    <line x1="835" y1="158" x2="835" y2="184" class="lna" marker-end="url(#ar5a)"/>
+    <rect x="710" y="184" width="250" height="48" class="bxa"/><text x="835" y="204" class="ta" text-anchor="middle">Closes 3, one over band → asks in chat</text><text x="835" y="221" class="ts" text-anchor="middle">owner taps approve on the phone</text>
+    <rect x="710" y="250" width="250" height="40" class="bxa"/><text x="835" y="275" class="ta" text-anchor="middle">Tools: ours, connected once by us</text>
+    <text x="835" y="316" class="tm" text-anchor="middle">TOKENS: OURS · TRIGGER: SCHEDULE · KEYS: OURS</text>
+  </svg>
+  <figcaption><b>The agent does not change. Three things around it do.</b> Advise to Act adds the tool connections and the agent finishes the job. Act to Autonomous moves the trigger from the owner to a schedule and the tokens from theirs to ours. Reading left to right, the owner's involvement shrinks from "does the work" to "sends the messages" to "taps approve occasionally", and the price follows that.</figcaption>
+  </figure>
+</section>
+
+<section id="s9">
+  <h2><span class="n">09</span>Where store data comes from</h2>
+  <p class="sum">Three levels, and only the third is an integration. Each level unlocks specific agents, which is why data depth is a better upgrade story than a feature list.</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 260" role="img" aria-label="Three nested data levels. Level 1, the public storefront, needs nothing and feeds Store Fix, Ad Creative, Competitor Watch and SEO. Level 2, a pasted orders CSV, adds Retention, Post-Purchase and Weekly Brain Update. Level 3, a Shopify custom app token, adds live order webhooks, draft orders and theme writes for UGC Seeding, Affiliate, Ad Growth and full Store Fix.">
+    <rect x="20" y="30" width="960" height="200" class="bxa"/>
+    <text x="40" y="56" class="ta">LEVEL 3 · Shopify custom app token, read-only scopes plus the writes an agent declares</text>
+    <text x="40" y="74" class="ts">merchant creates it in their own admin in five minutes. No Partner app, no app review. Live orders, checkouts, abandoned carts, draft orders, theme writes</text>
+    <text x="40" y="92" class="tb">Unlocks: Ad Growth · UGC Seeding · Affiliate · Store Fix in Act mode · Post-Purchase live · Offer and Landing Page</text>
+
+    <rect x="40" y="108" width="920" height="112" class="bxm"/>
+    <text x="60" y="132" class="tb">LEVEL 2 · a pasted export</text>
+    <text x="60" y="150" class="ts">orders and customers CSV, four clicks in admin. Repeat rate, average order value, top products, cohort behaviour, COD share</text>
+    <text x="60" y="168" class="tb">Unlocks: Retention and Winback · Weekly Brain Update with real numbers · Reviews timing per product</text>
+
+    <rect x="60" y="180" width="880" height="34" class="bxp"/>
+    <text x="80" y="195" class="tp">LEVEL 1 · the public storefront. Needs nothing.</text>
+    <text x="80" y="209" class="ts">/products.json, /collections.json, sitemap, page HTML, reviews, schema. Verified live. Unlocks: Store Fix Advise · Ad Creative · Competitor Watch · SEO audit · Brain Builder</text>
+  </svg>
+  <figcaption><b>Every level contains the one below it.</b> A buyer on Level 1 gets a genuinely complete audit and creative from a URL alone, which is why Tier 1 is honest. The rule for every agent: never ask for a credential the job in front of it does not need. Asking a $59 buyer for admin access on day one destroys the trust the price bought.</figcaption>
+  </figure>
+</section>
+
+<section id="s10">
+  <h2><span class="n">10</span>The brain: who reads what, who writes what</h2>
+  <p class="sum">Six layers plus two modules. The read and write permissions are the real schema, because they are what stop agents from corrupting each other's work.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Layer</th><th>Holds</th><th>Written by</th><th>Read by</th></tr></thead>
+    <tbody>
+    <tr><td><b>1 Identity</b></td><td>What we sell, brand voice, approved and forbidden claims, tone examples</td><td>Brain Builder at setup. Owner edits</td><td>Every agent that writes a word</td></tr>
+    <tr><td><b>2 Customer</b></td><td>Who buys, why, objections, the words they use, segments</td><td>Brain Builder, Reviews (objections), Retention (segments), Social (questions asked)</td><td>Ad Creative, Store Fix, Lifecycle, Content, SEO, Offer</td></tr>
+    <tr><td><b>3 Product</b></td><td>Catalogue, margins, replenishment cycles, seasonality, bundles</td><td>Brain Builder, Weekly Brain Update from level 2 or 3 data</td><td>Ad Growth, Retention, Post-Purchase, Offer, SEO</td></tr>
+    <tr><td><b>4 Performance</b></td><td>What every ad, email, page and campaign actually did, by week</td><td><b>Weekly Brain Update only.</b> No other agent may write here</td><td>Ad Growth, Retention, Operator for the brief, Ad Creative for what worked</td></tr>
+    <tr><td><b>5 Learnings</b> <span class="pill">moat</span></td><td>The decision log. Hypothesis, action, result, conclusion, dated</td><td>Every agent appends after a run. Nothing deletes, only supersedes</td><td>Every agent before a run. The Operator for "why did we"</td></tr>
+    <tr><td><b>6 Operations</b></td><td>Connected tools, spend caps, approvers, schedules, market module in force</td><td>Us at setup. Owner via dashboard. Operator for caps hit</td><td>Operator on every dispatch</td></tr>
+    <tr><td><b>Category Starter</b></td><td>Pre-built category knowledge, loaded once into layers 1 to 3</td><td>Us, maintained centrally</td><td>Merged at build, then it is just the brain</td></tr>
+    <tr><td><b>Market Playbook</b></td><td>Country module: payments, delivery norms, channels, calendars, return behaviour</td><td>Us, maintained centrally</td><td>Post-Purchase, Lifecycle, Retention, Offer, Ad Growth</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Format.</b> Markdown files in R2, one folder per customer, indexed in D1 for fast lookup of the current version of each layer. Markdown because the owner can read and edit it, because Tier 1 buyers hold it in their own hands, and because it is the format every AI runtime already reads. The Operator loads only the layers a job needs, never the whole brain, which keeps runs cheap.</p>
+</section>
+
+<section id="s11">
+  <h2><span class="n">11</span>Estimated monthly run cost per agent</h2>
+  <p class="sum">Why Hosted is priced per agent and why Ad Creative carries a volume cap. These are estimates from the current pipelines' known costs, not measurements from customers we do not yet have. Section 12 says how we will replace them with real numbers.</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 480" role="img" aria-label="Horizontal bar chart of estimated monthly run cost per agent in US dollars. Ad Creative is the outlier at roughly 25 to 40 dollars because of image generation. Most agents sit between 2 and 8 dollars. Against a 79 dollar per agent price, every agent clears margin, but a flat bundle at 79 for all would not.">
+    <text x="20" y="24" class="tb">Estimated cost to run one agent for one store, per month, USD</text>
+    <text x="20" y="42" class="ts">tokens + image or video generation + scraper and API credits. Estimate, not measured.</text>
+    <!-- axis -->
+    <line x1="260" y1="60" x2="260" y2="440" class="ln"/>
+    <line x1="260" y1="440" x2="960" y2="440" class="ln"/>
+    <text x="260" y="458" class="tm" text-anchor="middle">0</text>
+    <text x="435" y="458" class="tm" text-anchor="middle">10</text>
+    <text x="610" y="458" class="tm" text-anchor="middle">20</text>
+    <text x="785" y="458" class="tm" text-anchor="middle">30</text>
+    <text x="960" y="458" class="tm" text-anchor="middle">40</text>
+    <line x1="435" y1="60" x2="435" y2="440" class="lnd" opacity=".4"/>
+    <line x1="610" y1="60" x2="610" y2="440" class="lnd" opacity=".4"/>
+    <line x1="785" y1="60" x2="785" y2="440" class="lnd" opacity=".4"/>
+    <!-- bars: scale 17.5px per dollar -->
+    <text x="250" y="80" class="t" text-anchor="end">Ad Creative (40 creatives)</text><rect x="260" y="68" width="560" height="18" class="barm"/><text x="828" y="82" class="tm">~32</text>
+    <text x="250" y="110" class="t" text-anchor="end">Content Publishing</text><rect x="260" y="98" width="210" height="18" class="bar"/><text x="478" y="112" class="tm">~12</text>
+    <text x="250" y="140" class="t" text-anchor="end">Creator Outreach</text><rect x="260" y="128" width="140" height="18" class="bar"/><text x="408" y="142" class="tm">~8</text>
+    <text x="250" y="170" class="t" text-anchor="end">UGC Seeding</text><rect x="260" y="158" width="122" height="18" class="bar"/><text x="390" y="172" class="tm">~7</text>
+    <text x="250" y="200" class="t" text-anchor="end">SEO and AI Search</text><rect x="260" y="188" width="122" height="18" class="bar"/><text x="390" y="202" class="tm">~7</text>
+    <text x="250" y="230" class="t" text-anchor="end">Ad Growth</text><rect x="260" y="218" width="105" height="18" class="bar"/><text x="373" y="232" class="tm">~6</text>
+    <text x="250" y="260" class="t" text-anchor="end">Competitor Watch</text><rect x="260" y="248" width="88" height="18" class="bar"/><text x="356" y="262" class="tm">~5</text>
+    <text x="250" y="290" class="t" text-anchor="end">Store Fix</text><rect x="260" y="278" width="70" height="18" class="bar"/><text x="338" y="292" class="tm">~4</text>
+    <text x="250" y="320" class="t" text-anchor="end">Weekly Brain Update</text><rect x="260" y="308" width="70" height="18" class="bar"/><text x="338" y="322" class="tm">~4</text>
+    <text x="250" y="350" class="t" text-anchor="end">Retention and Winback</text><rect x="260" y="338" width="53" height="18" class="bar"/><text x="321" y="352" class="tm">~3</text>
+    <text x="250" y="380" class="t" text-anchor="end">Social Engagement</text><rect x="260" y="368" width="53" height="18" class="bar"/><text x="321" y="382" class="tm">~3</text>
+    <text x="250" y="410" class="t" text-anchor="end">Lifecycle · Post-Purchase · Reviews · Affiliate · Offer</text><rect x="260" y="398" width="35" height="18" class="bar"/><text x="303" y="412" class="tm">~2 each</text>
+    <!-- price line -->
+    <line x1="960" y1="60" x2="960" y2="440" class="lnp" stroke-dasharray="6 4"/>
+    <text x="955" y="70" class="tp" text-anchor="end">$79 price per agent →</text>
+  </svg>
+  <figcaption><b>One outlier, and it is the one with the cap.</b> Ad Creative costs roughly ten times the median because every run is 40 image generations plus QA passes. Against $79 per agent every bar clears margin comfortably. Against the old flat $79-for-everything idea, the sum of these bars (roughly $95 to $110 for all sixteen) would have been a loss, which is the whole reason for per-agent pricing. Content Publishing is the second-heaviest and is worth watching once real numbers exist.</figcaption>
+  </figure>
+</section>
+
+<section id="s12">
+  <h2><span class="n">12</span>Infrastructure and the repeatable playbook</h2>
+  <p class="sum">Nothing runs from a laptop. The control plane is Cloudflare because you already run a production pipeline there. The execution plane is one small VM because Workers cannot run a ten-minute agent loop with FFmpeg in it.</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 300" role="img" aria-label="Two planes. Control plane on Cloudflare: Workers for gateway and API, Cron Triggers, Queues, D1, R2, Browser Rendering, Secrets Store. Execution plane: one Hetzner VM running a Node worker with the Claude Agent SDK, FFmpeg, Remotion and Playwright, pulling jobs from the queue with no inbound ports. Arrows show the queue pull, output writes to R2, and event writes to D1.">
+    <defs><marker id="ar6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="20" y="30" width="600" height="240" class="grp"/>
+    <text x="320" y="52" class="tb" text-anchor="middle">CONTROL PLANE · Cloudflare · Workers Paid, $5 a month</text>
+    <rect x="40" y="70" width="170" height="44" class="bx"/><text x="125" y="88" class="t" text-anchor="middle">Workers</text><text x="125" y="103" class="ts" text-anchor="middle">gateway, API, portal</text>
+    <rect x="225" y="70" width="170" height="44" class="bx"/><text x="310" y="88" class="t" text-anchor="middle">Cron Triggers</text><text x="310" y="103" class="ts" text-anchor="middle">Hosted schedules</text>
+    <rect x="410" y="70" width="190" height="44" class="bxa"/><text x="505" y="88" class="ta" text-anchor="middle">Queues</text><text x="505" y="103" class="ts" text-anchor="middle">dispatch, retry, dead-letter</text>
+    <rect x="40" y="130" width="170" height="44" class="bx"/><text x="125" y="148" class="t" text-anchor="middle">D1</text><text x="125" y="163" class="ts" text-anchor="middle">runs, approvals, spend, brain index</text>
+    <rect x="225" y="130" width="170" height="44" class="bx"/><text x="310" y="148" class="t" text-anchor="middle">R2</text><text x="310" y="163" class="ts" text-anchor="middle">brains, outputs, creatives</text>
+    <rect x="410" y="130" width="190" height="44" class="bx"/><text x="505" y="148" class="t" text-anchor="middle">Browser Rendering</text><text x="505" y="163" class="ts" text-anchor="middle">crawls, screenshots</text>
+    <rect x="40" y="190" width="560" height="44" class="bx"/><text x="320" y="208" class="t" text-anchor="middle">Secrets Store</text><text x="320" y="223" class="ts" text-anchor="middle">every customer key and every vendor key. None on a laptop, none in a bundle, none in a repo</text>
+    <text x="320" y="258" class="ts" text-anchor="middle">the free plan's 50-subrequest cap already broke a previous project twice. Do not start there.</text>
+
+    <rect x="660" y="30" width="320" height="240" class="grp"/>
+    <text x="820" y="52" class="tb" text-anchor="middle">EXECUTION PLANE · one Hetzner CPX31, ~€14 a month</text>
+    <rect x="680" y="70" width="280" height="104" class="bx"/>
+    <text x="820" y="92" class="tb" text-anchor="middle">Node worker</text>
+    <text x="820" y="110" class="ts" text-anchor="middle">Claude Agent SDK runs the agents</text>
+    <text x="820" y="126" class="ts" text-anchor="middle">FFmpeg, Remotion, Playwright installed</text>
+    <text x="820" y="142" class="ts" text-anchor="middle">pulls jobs, never listens</text>
+    <text x="820" y="158" class="ts" text-anchor="middle">no inbound ports at all</text>
+    <text x="820" y="200" class="ts" text-anchor="middle">Cloudflare Containers is the eventual home.</text>
+    <text x="820" y="216" class="ts" text-anchor="middle">The queue contract does not change,</text>
+    <text x="820" y="232" class="ts" text-anchor="middle">so the migration is contained.</text>
+
+    <path d="M 600 92 L 680 92" class="ln" marker-end="url(#ar6)"/>
+    <text x="640" y="84" class="ts" text-anchor="middle">pulls</text>
+    <path d="M 680 130 L 395 152" class="lnd" marker-end="url(#ar6)"/>
+    <text x="560" y="128" class="ts" text-anchor="middle">writes outputs</text>
+    <path d="M 680 150 L 210 160" class="lnd" marker-end="url(#ar6)"/>
+    <text x="430" y="180" class="ts" text-anchor="middle">writes events, cost</text>
+  </svg>
+  <figcaption><b>Cloudflare is the public surface and the scheduler. The VM is a private worker.</b> The queue is the only contract between them, which is what lets us swap the VM for Containers later without touching anything else. Every run writes its token and API cost to D1 against the customer, which is how the estimates in section 11 become real numbers within the first month.</figcaption>
+  </figure>
+
+  <h3>The repeatable playbook, once the first agent runs</h3>
+  <ol>
+    <li><b>Define.</b> Write the agent folder: AGENT.md with the three modes, assets, one worked example, manifest.json with tools and guardrails.</li>
+    <li><b>Register.</b> Add its row to D1: name, modes, tools it may call, default cost estimate, default schedule.</li>
+    <li><b>Handle.</b> Write its queue handler on the VM: load the brain layers it needs, run, request approvals through the gateway, write outputs to R2, write events and cost to D1.</li>
+    <li><b>Schedule.</b> Point a Cron Trigger at it for Hosted customers who have it switched on.</li>
+    <li><b>Prove.</b> Run it on five real stores. Ship the worked example. Publish the real cost number.</li>
+  </ol>
+  <p>Ad Creative goes first because it is already built and verified, it cannot run in a chat so it proves the cloud tier is necessary, every run produces 40 images of marketing collateral, and it already has revenue attached as the $99 add-on. After it, steps 1 to 5 are the same for every agent, and each one is a week rather than a month.</p>
+
+  <h3>Cost control, before the first Hosted customer</h3>
+  <p>Per-customer monthly spend cap in D1, checked at dispatch. A run that would cross the cap queues and alerts rather than executing. Every run records its cost. A global daily cap across all customers as the last line. Without these, one runaway loop is a bad month, and with them the estimates in section 11 stop being estimates.</p>
+</section>
+
+</main>
+</div>
+
+<footer><div class="wrap">StoreCrew system design, 5 September 2026. Cost figures in section 11 are estimates from known pipeline costs, not customer measurements. Companion to the canonical product doc in Notion.</div></footer>
+</body>
+</html>
