@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>StoreCrew Build Roadmap</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{--paper:#F3F5F2;--card:#fff;--ink:#141A17;--ink2:#4C5A53;--ink3:#7B8A83;--rule:#D5DCD7;--rule2:#E7ECE8;--accent:#1F4FBF;--accent-soft:#E4EAFA;--mark:#B8791C;--mark-soft:#FAEFD8;--flag:#AE4030;--flag-soft:#F9E4E0;--pos:#177A56;--pos-soft:#DFF0E8}
+@media (prefers-color-scheme:dark){:root{--paper:#0F1513;--card:#171E1B;--ink:#E7EDE9;--ink2:#A4B2AB;--ink3:#75857D;--rule:#2A3531;--rule2:#1F2925;--accent:#7B9BF5;--accent-soft:#17233F;--mark:#E8AE45;--mark-soft:#38290F;--flag:#E6836A;--flag-soft:#3A1E18;--pos:#4FBE92;--pos-soft:#14312580}}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Serif 4",Georgia,serif;font-size:17px;line-height:1.55}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px}header{padding:52px 0 24px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+h1{font-family:"Bricolage Grotesque",Arial,sans-serif;font-weight:800;font-size:clamp(32px,5vw,52px);line-height:1.03;letter-spacing:-.02em;margin:10px 0 12px}
+.lede{font-size:19px;color:var(--ink2);max-width:64ch;margin:0}
+section{padding:26px 0 30px;border-bottom:1px solid var(--rule)}h2{font-family:"Bricolage Grotesque",Arial,sans-serif;font-weight:800;font-size:29px;letter-spacing:-.015em;margin:0 0 8px}
+h2 .n{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink3);display:block;letter-spacing:.06em;margin-bottom:6px}
+h3{font-family:"Bricolage Grotesque",Arial,sans-serif;font-weight:700;font-size:19px;margin:24px 0 8px}p{margin:0 0 12px;max-width:72ch}ul,ol{max-width:72ch;padding-left:21px}li{margin-bottom:5px}
+.tbl{overflow-x:auto;margin:12px 0 18px;border:1px solid var(--rule);background:var(--card)}table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{font-family:"Bricolage Grotesque",Arial,sans-serif;font-weight:700;text-align:left;padding:10px 12px;border-bottom:2px solid var(--rule);background:var(--paper);white-space:nowrap;font-size:13.5px}
+td{padding:9px 12px;border-bottom:1px solid var(--rule2);vertical-align:top}tr:last-child td{border-bottom:0}td.num{font-family:"JetBrains Mono",monospace;text-align:right;white-space:nowrap;font-size:13.5px}
+.verdict{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:16px 20px;margin:16px 0 20px}.verdict .lbl{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.flag{background:var(--flag-soft);border:1px solid var(--flag);border-left:4px solid var(--flag);padding:14px 18px;margin:14px 0 18px}.flag .lbl{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--flag);margin-bottom:6px}
+.pill{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:2px;background:var(--mark-soft);color:var(--mark);font-weight:600}.pill.g{background:var(--pos-soft);color:var(--pos)}.pill.b{background:var(--accent-soft);color:var(--accent)}.pill.r{background:var(--flag-soft);color:var(--flag)}
+.small{font-size:14px;color:var(--ink3)}code{font-family:"JetBrains Mono",monospace;font-size:13.5px;background:var(--rule2);padding:1px 5px;border-radius:2px}
+.gantt{display:grid;grid-template-columns:220px repeat(10,1fr);gap:4px;font-size:12.5px;margin:12px 0 18px;min-width:760px}.gantt .h{font-family:"JetBrains Mono",monospace;color:var(--ink3);text-align:center}.gantt .l{font-family:"Bricolage Grotesque",Arial,sans-serif;font-weight:600;padding:4px 0}.gantt .b{height:22px;border-radius:2px;background:var(--accent-soft)}.gantt .b.on{background:var(--accent)}.gantt .b.wait{background:var(--mark-soft);border:1px dashed var(--mark)}
+footer{padding:24px 0 56px;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink3)}
+</style></head><body>
+<header><div class="wrap"><div class="eyebrow">StoreCrew / build roadmap and architecture recommendation / 5 September 2026</div>
+<h1>How we build it, in what order, and what it costs to run</h1>
+<p class="lede">The recommendation, not a menu. Cloud is the destination, the Mac is only where V1 is tested. Simple and boring wins every tie. Companion: <a href="../architecture/">How the crew is wired</a> (diagrams).</p></div></header>
+<div class="wrap">
+
+<section id="codex"><h2><span class="n">01</span>Codex</h2>
+<div class="verdict"><div class="lbl">Recommendation</div><p><b>Your instinct is right. Build the runtime one way, here.</b> Splitting the runtime path across two coding agents to save tokens buys a merge problem, two mental models of the same system, and a fail-closed approval path that nobody owns end to end. The only work that survives the test of "genuinely siloed, finishes cleanly, hands back a finished artefact I consume" is three tasks with a schema-defined boundary: the dashboard frontend built against the Worker's OpenAPI spec, the conversion of the 330-checkpoint workbook and the ad concept libraries into their JSON schemas, and the port of the forked Advise-mode skill libraries into <code>agents/*/assets</code>. Those three can go to Codex in parallel if you want to spend those tokens. Nothing on the runtime, gateway, approval or brain path does. The build pack in <code>storecrew-app</code> stays valid as the specification regardless of who types.</p></div></section>
+
+<section id="shopify"><h2><span class="n">02</span>Shopify access, the real answer</h2>
+
+<div class="verdict"><div class="lbl">Definitive, from live shopify.dev today</div>
+<p><b>For our model, no Shopify review and no protected-data review.</b> We create one app per merchant in our Dev Dashboard with <b>custom distribution</b>, generate an install link for that merchant's store, and they click it. Shopify's distribution table for custom distribution reads "Approval required: No", and the protected customer data table reads "Custom app: Always available" for both Level 1 and Level 2. The merchant sees a standard permissions screen and clicks Install. Two to three minutes on their side, no token copying, nothing to configure.</p>
+<p>Sources: <a href="https://shopify.dev/docs/apps/launch/distribution">Distribution</a>, <a href="https://shopify.dev/docs/apps/launch/distribution/select-distribution-method">Select a distribution method</a>, <a href="https://shopify.dev/docs/apps/launch/protected-customer-data">Protected customer data</a>, <a href="https://shopify.dev/docs/api/usage/access-scopes">Access scopes</a>, <a href="https://shopify.dev/docs/apps/build/authentication-authorization/legacy/admin-custom-apps">Admin-created custom apps (legacy)</a>, <a href="https://shopify.dev/docs/apps/build/authentication-authorization/client-credentials-grant">Client credentials grant</a>.</p></div>
+<h3>The two paths, quoted</h3>
+<div class="tbl"><table><thead><tr><th></th><th>Custom distribution (our first 20)</th><th>Public distribution (at scale)</th></tr></thead><tbody>
+<tr><td>Where it installs</td><td>"Installed on a single Shopify store, on multiple stores that belong to the same Plus organization, or on transfer-disabled development stores"</td><td>"Can be installed on multiple Shopify stores"</td></tr>
+<tr><td>Shopify app review</td><td>"Approval required: No"</td><td>"Approval required: Yes". There is no unlisted path: "Unpublished apps: Deprecated as of December 9, 2019." Limited-visibility listings still go through the same review</td></tr>
+<tr><td>Protected customer data (names, emails, phones, addresses)</td><td>Level 1 and Level 2: "Always available"</td><td>"Requires review" for both levels, requested in the Partner Dashboard, and "Applying for protected customer data isn't possible while the app is under review"</td></tr>
+<tr><td>Billing</td><td>"Can't charge merchants through Shopify's app billing system". We invoice outside Shopify, which we do anyway</td><td>Shopify billing available</td></tr>
+<tr><td>Token</td><td>Non-expiring offline token: "No expiry. Valid until the app is uninstalled or its client secret is revoked"</td><td>"Public apps must use expiring offline access tokens for GraphQL Admin API requests by January 1, 2027"</td></tr>
+<tr><td>Can it change later</td><td colspan="2">"You can't change the distribution method after you select it." So the 20 custom apps never become the public app; migration is a reinstall</td></tr>
+<tr><td>Review timeline</td><td>None</td><td>No duration is published anywhere on shopify.dev. Budget weeks. Start it around merchant 15</td></tr>
+</tbody></table></div>
+<h3>What is dead, and what does not help</h3>
+<ul><li><b>Merchant-created tokens are gone.</b> "You can no longer create new admin-created custom apps. Existing apps are unaffected and continue to work. For new apps, use Dev Dashboard or Shopify CLI." Our earlier Level 3 design assumed a merchant pastes a token. It cannot happen any more.</li>
+<li><b>Client credentials grant does not cross organisations.</b> "Client credentials can't reach a store outside your organization, including a client's store." It is for your own stores only.</li>
+<li><b>The one merchant-self-serve variant</b> (they create the app in their own Dev Dashboard and hand us a client id and secret) is undocumented for live merchant stores and puts credentials in their hands. Not building on it.</li></ul>
+<h3>Exact steps, first 20 merchants</h3>
+<div class="tbl"><table><thead><tr><th>Our side, about 5 minutes per merchant</th><th>Merchant side, 2 to 3 minutes</th></tr></thead><tbody>
+<tr><td>1. Dev Dashboard, Create app, "StoreCrew for {merchant}"<br>2. Set the OAuth callback URL and the scopes from the table below, Release<br>3. App distribution, Custom, enter their myshopify.com domain, Generate link<br>4. Email them the link<br>5. On callback: exchange the code for a non-expiring offline token, <b>verify the granted scopes</b> ("Merchants can modify requested scopes during authorization, so always verify before storing the token"), encrypt into their tenant blob, register order webhooks</td><td>1. Open the link while logged in as the store owner<br>2. Read the permissions screen<br>3. Click Install<br><br>That is all. If we ever add a scope, they are prompted once to approve it.</td></tr>
+</tbody></table></div>
+<h3>Scopes by agent, and the protected-data flag</h3>
+<div class="tbl"><table><thead><tr><th>Agent</th><th>Scopes</th><th>Protected data</th></tr></thead><tbody>
+<tr><td>Store Fix</td><td>read_products, write_themes, write_content</td><td>None</td></tr>
+<tr><td>Competitor Watch</td><td>None (public data only)</td><td>None</td></tr>
+<tr><td>Weekly Brain Update</td><td>read_orders, read_products</td><td>Level 2 if it reads customer name or email on orders. Always available on custom apps</td></tr>
+<tr><td>Post-Purchase</td><td>read_orders (webhooks orders/create), read_customers</td><td>Level 2</td></tr>
+<tr><td>Retention and Winback</td><td>read_orders, read_customers</td><td>Level 2</td></tr>
+<tr><td>UGC Seeding, Creator Outreach</td><td>write_draft_orders</td><td>Level 2 (draft orders relate to a customer)</td></tr>
+<tr><td>Affiliate, Offer and Landing Page</td><td>write_discounts, write_content</td><td>None</td></tr>
+<tr><td>SEO and AI Search</td><td>write_products (product metafields), write_content</td><td>None</td></tr>
+<tr><td>Orders older than 60 days, any agent</td><td>read_all_orders</td><td><span class="pill r">Needs a Partner Dashboard request even on custom apps</span>. We live inside 60 days and skip it</td></tr>
+</tbody></table></div>
+<p class="small">Notes from the docs: "Any permission to write a resource includes permission to read it." There is no read_analytics scope any more. Metafields ride on the owner resource's scope. Webhook payloads carrying customer data are redacted exactly like API responses. Level 1 and 2 practices (encryption, retention, access logs, incident response) remain obligations even though the review is waived; our secrets design already meets them.</p>
+<div class="flag"><div class="lbl">What I need from you today for this</div><p>Access to a Shopify Dev Dashboard where I can create apps (your Partner account, or a merchant organisation with the App developer role), plus the staging store's myshopify.com domain. With those two things the first install link exists within the hour. Nothing else on this path waits on anyone.</p></div>
+
+</section>
+
+<section id="arch"><h2><span class="n">03</span>Architecture recommendation</h2>
+<p>Everything below is already specified in <code>storecrew-app/specs/</code>. This is the why.</p>
+<h3>Runtime</h3>
+<div class="tbl"><table><thead><tr><th>Concern</th><th>Decision</th><th>Why this and not something cleverer</th></tr></thead><tbody>
+<tr><td>Where agents execute</td><td>One Node 22 process on one Hetzner VM (CPX31, about 14 euros a month), no inbound ports, pulling jobs from a Cloudflare Queue</td><td>Workers cannot run a ten-minute loop with image rendering in it. A VM can, and one process is the easiest thing in the world to reason about. Cloudflare Containers later is a contained migration because the queue contract does not change</td></tr>
+<tr><td>How they are triggered</td><td>Three triggers, one path: owner message via the Operator, Cron Trigger every 15 minutes for Hosted schedules, approval resume. All become a <code>RunInput</code> on the queue</td><td>One dispatch function, one cap check, one idempotency key. There is no second way to start a run</td></tr>
+<tr><td>How they hold state</td><td>They do not. The runner is stateless between pulls. A run that needs approval ends; the resume is a new run carrying <code>resume_from</code>. State lives in D1 (runs, approvals, events), R2 (outputs, brain), and one Durable Object per customer for conversation</td><td>Kill the VM mid-run and exactly one run completes. That property is worth more than any framework feature</td></tr>
+<tr><td>The agent loop</td><td>Ours, roughly 400 lines, provider-agnostic behind one interface. No Claude Agent SDK, no LangGraph</td><td>Our agents have fixed tool lists and bounded runs. We lose nothing, and we own the approval gate, which is the one thing that must never live in someone else's library</td></tr>
+<tr><td>Durability</td><td>Cloudflare Queues with retries and dead-letter, plus the idempotency key</td><td>Temporal is the fully-MIT escape hatch if a multi-day run ever appears. It has not</td></tr>
+</tbody></table></div>
+<h3>Multi-tenancy, designed in on day one</h3>
+<ul><li>Every table except <code>customers</code> and <code>agents</code> carries <code>customer_id</code>, every query filters on it, and a test introspects the schema to prove it. There is no cross-customer read path to retrofit later.</li>
+<li>One Durable Object per customer for conversation state and the approval lock. Tenants cannot share a DO by construction.</li>
+<li>R2 keys are prefixed by customer. Signed URLs only, 15-minute expiry. The bucket is private.</li>
+<li>Shopify: one app per customer at launch (see section 02), so a token cannot be valid for two stores.</li>
+<li>Every <code>/api/*</code> route returns 404, never 403, for another tenant's id. We do not confirm existence.</li>
+<li>Agents share state only through the brain, and the brain is per customer. Agents never call each other.</li></ul>
+<h3>Secrets</h3>
+<ul><li>Per-customer credentials live in one AES-GCM encrypted blob per customer in D1, keyed by a master key in Cloudflare Secrets Store. The runner fetches a credential per run over an authenticated internal endpoint, holds it in memory for the run, and zeroes it. It never lands on disk.</li>
+<li>The runner has exactly two credentials of its own: the Cloudflare API token for queues and R2, and the model key.</li>
+<li>Prompts never contain credentials. Tools take a <code>ctx.secret(kind)</code> accessor; the model sees tool names and arguments, not keys.</li>
+<li>Logging redacts any key matching token, secret, key, password, authorization, and any value matching known key prefixes. A CI test greps captured logs for every fixture secret.</li>
+<li>Rotation: revoke and relink a connector from the dashboard. Shopify offline tokens rotate by reinstall. The master key rotates by re-encrypting blobs in a migration.</li></ul>
+<h3>API surface</h3>
+<p>One Worker, one Hono app. The dashboard and any future client call the same <code>/api/*</code> routes behind a magic-link session cookie. Channels arrive at <code>/webhooks/*</code>. The public activity feed is <code>/public/activity</code>. The runner talks to the Worker only through <code>/internal/*</code> with a runner token. Nothing calls the VM. Full route table in <code>SPEC-02</code>.</p>
+<h3>Observability without a terminal</h3>
+<ul><li>Every state change is an <code>events</code> row. The dashboard timeline, the activity strip, the Monday brief and the ops alerts are all views over that one table.</li>
+<li>Ops alerts land in a Telegram chat you already have open: dead-letter arrival, approval token mismatch, connector failure, runner heartbeat missing for five minutes, any customer hitting monthly cap before day 20, provider error rate over 10 percent. One alert per condition per hour.</li>
+<li><code>/health</code> is green or red. <code>/ops</code> shows gross margin per customer. If you never open a terminal after deploy, nothing is hidden from you.</li></ul>
+<h3>Unit economics: what one Hosted customer costs to run</h3>
+<p>Assumptions stated so you can argue with them. Model: Sonnet-class at 3 dollars per million input and 15 per million output, about 80 percent of tokens are input. Store doing 100 orders a month. Every agent on its default schedule. Cloudflare Workers Paid 5 dollars a month and the VM about 15 dollars a month, shared across customers and shown here at 20 customers.</p>
+<div class="tbl"><table><thead><tr><th>Cost line</th><th>Basis</th><th class="num">All 16 agents</th><th class="num">Three agents</th><th class="num">One agent</th><th class="num">14-day trial</th></tr></thead><tbody>
+<tr><td>Model tokens</td><td>About 5M tokens a month for all sixteen (Ad Growth daily 1.2M, Creator Outreach 0.9M, Content 0.6M, Reviews 0.6M, Post-Purchase 0.5M, the rest under 0.4M each)</td><td class="num">$30</td><td class="num">$10</td><td class="num">$4</td><td class="num">$2</td></tr>
+<tr><td>Image generation</td><td>40 creatives plus about 30 content images at FLUX schnell 0.003 plus a vision QA pass</td><td class="num">$2</td><td class="num">$0</td><td class="num">$0</td><td class="num">$0</td></tr>
+<tr><td>Creator data and email finding</td><td>ScrapeCreators about 200 lookups, 40 email finds</td><td class="num">$3</td><td class="num">$3</td><td class="num">$0</td><td class="num">$0</td></tr>
+<tr><td>WhatsApp conversations</td><td>Post-Purchase, about 100 business-initiated conversations</td><td class="num">$5</td><td class="num">$0</td><td class="num">$0</td><td class="num">$0</td></tr>
+<tr><td>Social publishing (Zernio)</td><td>Three connected accounts</td><td class="num">$12</td><td class="num">$0</td><td class="num">$0</td><td class="num">$0</td></tr>
+<tr><td>Infrastructure share</td><td>20 dollars a month across 20 customers</td><td class="num">$1</td><td class="num">$1</td><td class="num">$1</td><td class="num">$0.50</td></tr>
+<tr><td><b>Total cost per customer per month</b></td><td></td><td class="num"><b>$53</b></td><td class="num"><b>$14</b></td><td class="num"><b>$5</b></td><td class="num"><b>$2.50</b></td></tr>
+<tr><td>Price</td><td></td><td class="num">$549</td><td class="num">$199</td><td class="num">$79</td><td class="num">free</td></tr>
+<tr><td><b>Gross margin</b></td><td></td><td class="num"><b>90%</b></td><td class="num"><b>93%</b></td><td class="num"><b>94%</b></td><td class="num"></td></tr>
+</tbody></table></div>
+<p class="small">Sensitivities in order: a content-heavy store doubles the token line; switching the default model to Opus-class multiplies it by five, so Opus is reserved for QA passes only; Zernio is the largest non-model line and only applies when Content Publishing is on. The per-customer spend cap in D1 (SPEC-09) is what turns these estimates into a ceiling rather than a hope. A trial costs under 3 dollars, which is why the wedge is nearly free.</p>
+<div class="flag"><div class="lbl">Over-engineering I am flagging, including things asked for</div><ul>
+<li>Cloudflare Containers or Workflows for the agent loop now. One VM and a queue is simpler and identical in behaviour. Revisit at 200 customers.</li>
+<li>A vector database for the brain. Markdown in R2 with a D1 index was independently validated over every option. Add semantic recall only when a real query fails without it.</li>
+<li>WhatsApp at launch. Telegram proves the entire interaction model in two days with no gatekeeper. WhatsApp is an adapter behind a Meta review we start on day one and ship when it clears.</li>
+<li>Autonomous mode for all sixteen at launch. Three agents autonomous and thirteen in Advise is a complete, honest, sellable Hosted product. The rest move to Act on a published fortnightly schedule.</li>
+<li>Self-serve signup for Motion B. You said it yourself: premature. Twenty hand-onboarded customers first.</li></ul></div></section>
+
+<section id="agents"><h2><span class="n">04</span>The agent list, confirmed</h2>
+<p>You have been saying fourteen to fifteen. The agreed number is <b>sixteen sellable specialists</b>, plus two that are architecture rather than product: the Brain Builder (runs once at onboarding) and the Operator (the one they talk to). Eighteen in code, sixteen on the price list.</p>
+<div class="tbl"><table><thead><tr><th>#</th><th>Agent</th><th>Group</th><th>Vertical slice</th><th>Spec state</th></tr></thead><tbody>
+<tr><td>1</td><td>Store Fix</td><td>Original ten</td><td><span class="pill g">Slice</span></td><td>Full</td></tr>
+<tr><td>2</td><td>Competitor Watch</td><td>Original ten</td><td><span class="pill g">Slice, trial</span></td><td>Full</td></tr>
+<tr><td>3</td><td>Weekly Brain Update</td><td>Original ten</td><td><span class="pill g">Slice, trial</span></td><td>Full</td></tr>
+<tr><td>4</td><td>Creator Outreach</td><td>Original ten</td><td></td><td>Full</td></tr>
+<tr><td>5</td><td>Ad Creative</td><td>Original ten</td><td></td><td>Full</td></tr>
+<tr><td>6</td><td>Lifecycle</td><td>Original ten</td><td></td><td>Contract</td></tr>
+<tr><td>7</td><td>Post-Purchase</td><td>Original ten</td><td></td><td>Contract</td></tr>
+<tr><td>8</td><td>Content Publishing</td><td>Original ten</td><td></td><td>Contract</td></tr>
+<tr><td>9</td><td>Reviews (grow and respond)</td><td>Original ten</td><td></td><td>Contract</td></tr>
+<tr><td>10</td><td>SEO and AI Search</td><td>Original ten</td><td></td><td>Contract</td></tr>
+<tr><td>11</td><td>Ad Growth</td><td>New six</td><td></td><td>Contract</td></tr>
+<tr><td>12</td><td>UGC Seeding</td><td>New six</td><td></td><td>Contract</td></tr>
+<tr><td>13</td><td>Retention and Winback</td><td>New six</td><td></td><td>Contract</td></tr>
+<tr><td>14</td><td>Affiliate</td><td>New six</td><td></td><td>Contract</td></tr>
+<tr><td>15</td><td>Social Engagement</td><td>New six</td><td></td><td>Contract</td></tr>
+<tr><td>16</td><td>Offer and Landing Page</td><td>New six</td><td></td><td>Contract</td></tr>
+<tr><td></td><td>Brain Builder</td><td>Architecture</td><td><span class="pill g">Slice</span></td><td>Full</td></tr>
+<tr><td></td><td>Operator</td><td>Architecture</td><td><span class="pill g">Slice</span></td><td>Spec</td></tr>
+</tbody></table></div>
+<p><b>Assumption stated:</b> the top Hosted bundle covers all sixteen, not "ten". If you want a ten-agent bundle as the ceiling, name the six to hold back and the price table adjusts; cost per customer drops by about 15 dollars.</p>
+<p><b>Why these three for the slice.</b> Store Fix exercises Shopify OAuth, theme writes and the approval gate. Competitor Watch exercises scheduled autonomous runs, read-only tools and the trial. Weekly Brain Update exercises the brain write-back and the Telegram brief. Between them they touch every layer once. Prove those, and the other thirteen are the same shape with different tools.</p></section>
+
+<section id="roadmap"><h2><span class="n">05</span>Roadmap with dependencies</h2>
+<p>Ten weeks to a sellable Hosted product with three agents autonomous, thirteen in Advise, and both motions ready. Phases in bold cannot start until their dependency finishes. Everything else overlaps.</p>
+<div class="tbl"><div class="gantt">
+<div class="h"></div><div class="h">W1</div><div class="h">W2</div><div class="h">W3</div><div class="h">W4</div><div class="h">W5</div><div class="h">W6</div><div class="h">W7</div><div class="h">W8</div><div class="h">W9</div><div class="h">W10</div>
+<div class="l">0 Discovery and access</div><div class="b on"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div>
+<div class="l">1 Foundation (done today)</div><div class="b on"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div>
+<div class="l">2 Vertical slice</div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div>
+<div class="l">3 Cloud deploy of the slice</div><div class="b"></div><div class="b"></div><div class="b on"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div>
+<div class="l">4 Mass production, Advise</div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div>
+<div class="l">5 Act mode, in ship order</div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div>
+<div class="l">6 Dashboard and billing</div><div class="b"></div><div class="b"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div>
+<div class="l">7 Five-store QA</div><div class="b"></div><div class="b"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b"></div><div class="b"></div>
+<div class="l">8 Meta and Shopify reviews</div><div class="b wait"></div><div class="b wait"></div><div class="b wait"></div><div class="b wait"></div><div class="b wait"></div><div class="b wait"></div><div class="b wait"></div><div class="b wait"></div><div class="b"></div><div class="b"></div>
+<div class="l">9 Motion A packaging</div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b"></div><div class="b"></div><div class="b"></div>
+<div class="l">10 Motion B outreach</div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div><div class="b on"></div>
+</div></div>
+<div class="tbl"><table><thead><tr><th>Phase</th><th>What</th><th>Blocked by</th><th>Unblocks</th><th>Parallel with</th></tr></thead><tbody>
+<tr><td><b>0 Discovery and access</b></td><td>Accounts, keys, the staging store, the list provenance decision, guardrail decision</td><td>You, this week</td><td>Everything</td><td>Phase 1</td></tr>
+<tr><td><b>1 Foundation</b></td><td>Monorepo, shared package, schema, worker skeleton, placeholder register. Done today, tests green</td><td>Nothing</td><td>Phase 2</td><td>Phase 0</td></tr>
+<tr><td><b>2 Vertical slice</b></td><td>Brain Builder, Store Fix, Competitor Watch, Weekly Brain Update through runner, Shopify auth, Telegram approvals, brain, minimal dashboard, on the Mac against the staging store</td><td>Phase 1. Shopify app credentials and staging store for the Store Fix act path. Telegram bot token for approvals</td><td>Phases 3, 4, 6, 7</td><td>Phase 0 items you have not supplied yet run as fail-closed placeholders</td></tr>
+<tr><td><b>3 Cloud deploy</b></td><td>Worker to Cloudflare, runner to the VM, cron live, same slice running unattended for 7 days</td><td>Phase 2. Cloudflare auth and Workers Paid. Hetzner VM</td><td>Motion B outreach</td><td>Phase 4</td></tr>
+<tr><td>4 Mass production, Advise</td><td>The other thirteen in Advise mode against the proven pattern, one or two a day</td><td>Phase 2 proven</td><td>Phase 5, Motion A packaging</td><td>Phases 3, 6, 7</td></tr>
+<tr><td>5 Act mode</td><td>Act and Autonomous for the rest, in ship order: Creator Outreach, Ad Creative, Lifecycle, Reviews, Retention, then the six new</td><td>Phase 4 per agent, connector credentials per agent</td><td>Bundle upgrades</td><td>Everything</td></tr>
+<tr><td>6 Dashboard and billing</td><td>Full dashboard, Dodo, entitlements, caps enforced</td><td>Phase 2 API surface stable</td><td>Any paid customer</td><td>Phases 3, 4</td></tr>
+<tr><td>7 Five-store QA</td><td>Every agent scored on five real stores before its mode ships</td><td>Five stores with permission</td><td>Ship decision per agent</td><td>Everything</td></tr>
+<tr><td>8 Platform reviews</td><td>Meta Business Verification (WhatsApp, Instagram), Shopify public app and protected customer data</td><td>Your legal entity documents, day one</td><td>WhatsApp channel, Social Engagement act mode, one-link Shopify onboarding at scale</td><td>Runs in the background the whole time. Not on our clock</td></tr>
+<tr><td>9 Motion A packaging</td><td>Skill bundles, install guides, landing page, checkout</td><td>Phase 4 (Advise mode is the DIY product)</td><td>Performance marketing</td><td>Phase 5</td></tr>
+<tr><td>10 Motion B outreach</td><td>List sourced legitimately, pitch, trial flow, first 20 hand onboarded</td><td>Phase 3 (a trial has to run unattended), list provenance resolved</td><td>Revenue</td><td>Phase 5</td></tr>
+</tbody></table></div>
+<p><b>What genuinely cannot be parallelised:</b> the slice before mass production (or fifteen agents get rebuilt), a proven unattended run before outreach (or the trial fails in front of a prospect), and the platform reviews, which are on Meta's and Shopify's clocks and started today or not at all.</p>
+
+<h3>Everything the build needs</h3>
+<div class="tbl"><table><thead><tr><th>Need</th><th>Have</th><th>Recommendation</th><th>Alternatives</th><th>Cost</th></tr></thead><tbody>
+<tr><td>Compute for the runner</td><td>No</td><td>Hetzner CPX31</td><td>DigitalOcean 4GB droplet ($24), Fly.io machine ($20 to 30)</td><td>About $15 a month</td></tr>
+<tr><td>Control plane</td><td>Cloudflare account exists, not authenticated here</td><td>Cloudflare Workers Paid</td><td>None worth it. You already run Winning Statics here</td><td>$5 a month plus usage, tiny</td></tr>
+<tr><td>Model API</td><td>Mac plan for V1</td><td>Anthropic API key with a hard budget for production</td><td>OpenAI, the loop is provider-agnostic</td><td>Per the table above, about $30 per full customer</td></tr>
+<tr><td>Chat channel</td><td>No bot</td><td>Telegram bot, 30 seconds with BotFather</td><td>WhatsApp Cloud API after Meta verification</td><td>Free. WhatsApp about $0.05 per conversation</td></tr>
+<tr><td>Shopify</td><td>Need Dev Dashboard access and a staging store</td><td>See section 02</td><td></td><td>Free</td></tr>
+<tr><td>Creator data</td><td>ScrapeCreators key exists but on which account is unverified</td><td>ScrapeCreators, personal account</td><td>HikerAPI (Instagram only, $1 per 1,000), EnsembleData ($100 a month)</td><td>$47 for 25,000 credits that never expire</td></tr>
+<tr><td>Email finder</td><td>No</td><td>Hunter free tier to start</td><td>Snov.io, Findymail pay on success</td><td>Free to $34 a month</td></tr>
+<tr><td>Images</td><td>Replicate key exists (Winning Statics)</td><td>Replicate, FLUX schnell default</td><td>fal (watch the megapixel rounding), Imagen on paid Vertex for indemnity</td><td>$0.003 per image</td></tr>
+<tr><td>Social publishing</td><td>No</td><td>Zernio</td><td>Ayrshare ($599 a month, enterprise), Mixpost Enterprise self-host ($1,199 once)</td><td>Free for 2 accounts, then $1 to $6 per account</td></tr>
+<tr><td>Reviews</td><td>No</td><td>Judge.me test store</td><td>Reviews.io, Stamped</td><td>Free tier</td></tr>
+<tr><td>Email platform for tests</td><td>Brevo employer access is not usable</td><td>Klaviyo free account on the staging store</td><td>Customer.io</td><td>Free</td></tr>
+<tr><td>Ads</td><td>Personal Meta ad account status unknown</td><td>Official Meta Ads MCP</td><td>Python SDK if MCP access is refused</td><td>Free</td></tr>
+<tr><td>Billing</td><td>Dodo exists for Winning Statics</td><td>New Dodo product set under a StoreCrew entity</td><td>Stripe, Paddle</td><td>Percentage of revenue</td></tr>
+<tr><td>Keyword and SERP data</td><td>treg on the employer team, not usable</td><td>Serper free 2,500 queries, then DataForSEO</td><td>Personal treg team</td><td>$0 then about $0.60 per 1,000</td></tr>
+<tr><td>Ops alerts</td><td>No</td><td>A second Telegram chat</td><td></td><td>Free</td></tr>
+<tr><td>Domain and email sending</td><td>storecrew domain unknown</td><td>storecrew.com or .in, Cloudflare DNS, transactional via Resend</td><td>Postmark</td><td>About $20 a year plus free tier</td></tr>
+<tr><td>Outreach list, Motion B</td><td><span class="pill r">Provenance unverified</span></td><td>Build your own from public storefront discovery plus an email finder, or license a store database</td><td>Store Leads, BuiltWith, Charm.io (prices unverified)</td><td>$100 to $300 a month range, unverified</td></tr>
+</tbody></table></div></section>
+
+<section id="motions"><h2><span class="n">06</span>The two motions, refreshed</h2>
+<h3>Motion A, the digital product</h3>
+<p>What changes against the earlier ideation, now that Hosted is real and the Advise mode exists as a first-class thing: <b>the DIY tier is Advise mode itself.</b> Every agent already has a mode that runs on the buyer's own ChatGPT or Claude with zero credentials. That is the product. It is not a separate build.</p>
+<div class="tbl"><table><thead><tr><th>Tier</th><th>Was</th><th>Now</th><th>Format</th></tr></thead><tbody>
+<tr><td>One, DIY</td><td>Skill files plus a brain the buyer builds</td><td>All sixteen agents in Advise mode plus the Brain Builder, installable in their own AI. Their tokens, their tooling</td><td>Skill bundles (below)</td></tr>
+<tr><td>Two</td><td>We connect their tools with them in a walkthrough</td><td>Same bundle plus the Act-mode tool wiring as install recipes, plus a 90-minute walkthrough where we connect their keys. They run it, on their keys</td><td>Bundle plus session</td></tr>
+<tr><td>Three</td><td>Done for you, monthly</td><td><b>Is Hosted.</b> Tier three of Motion A and the product of Motion B are the same system. Motion A's landing page sells it as the top rung; Motion B sells it as the whole product to a different audience</td><td>Hosted</td></tr>
+</tbody></table></div>
+<p><b>Format for the DIY tier, recommended and defended:</b> Agent Skills bundles to the agentskills.io open standard. One folder per agent: <code>SKILL.md</code>, <code>assets/</code>, <code>examples/</code>, <code>manifest.json</code>, shipped under <code>.agents/skills/</code> and mirrored to <code>.claude/skills/</code>. Why: one tree installs into Claude, Claude Code, Codex, Cursor, Antigravity and OpenCode without conversion; <code>npx skills add</code> is the distribution channel and the skills.sh leaderboard is free traffic; the same <code>AGENT.md</code> that runs on our cloud is the <code>SKILL.md</code> in the bundle, so the DIY product and the Hosted product are literally the same files at different modes, and there is nothing to keep in sync. The alternative, a zip of prompts and PDFs, is what every competitor sells and what buyers do not open.</p>
+<h3>Motion B, the hosted solution</h3>
+<p>Sold as one solution customised per store, in the Runneth frame: the brain for your store, and the crew that runs on it. Never the word retainer. The customisation is real and cheap: the brain is per store by construction, and the three-agent bundle is chosen per store on the onboarding call. Hand onboarding for the first twenty means a 60-minute call where we build the brain live, connect Shopify, run Store Fix while they watch, and leave the trial pair running. Self-serve waits until twenty customers have taught us what the call needs to cover.</p>
+<div class="flag"><div class="lbl">The list</div><p><b>I cannot confirm the 25,000 Shopify owner list is yours to use, and I would not use it until you can.</b> The only record I hold is my own note from an earlier session that you have such a list. There is no file on this machine, and given your role, the likeliest origin is PushOwl or Brevo systems. Using employer customer data for a personal product is a contract and privacy problem, not a marketing one. Two clean alternatives: build your own list from public storefront discovery plus an email finder (slow, free, defensible), or license a Shopify store database from Store Leads, BuiltWith or Charm.io (fast, a few hundred dollars a month, prices unverified). Decision goes in the Notion doc.</p></div></section>
+
+<section id="today"><h2><span class="n">07</span>Blocking today, and what happened while you were away</h2>
+<ul><li><b>Blocking the slice's Shopify act path:</b> a Shopify Dev Dashboard app (or access to create one) and the staging store URL. Everything else in the slice runs without it.</li>
+<li><b>Blocking the approval flow:</b> a Telegram bot token. Thirty seconds with BotFather. Without it, approvals are tested through the dashboard path only.</li>
+<li><b>Blocking any deploy:</b> Cloudflare authentication on this machine, or an API token. Local build is unaffected.</li>
+<li><b>Blocking Motion B outreach design:</b> the list provenance answer.</li>
+<li><b>Not blocking anything:</b> everything else is in the Notion doc as a fail-closed placeholder in <code>PLACEHOLDERS.md</code>.</li></ul>
+<p>Foundation is built and green. The slice is in progress. Report follows when it is proven end to end.</p></section>
+
+</div><footer><div class="wrap">Source of truth for the code: farooqchisty-hub/storecrew-app (private). Specs in that repo win over this page where they differ.</div></footer></body></html>
